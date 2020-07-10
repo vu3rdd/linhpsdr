@@ -372,19 +372,25 @@ static int check_wisdom(void *data) {
 }
 
 gboolean retry_cb(GtkWidget *widget,gpointer data) {
-  gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_WATCH));
-  if(view!=NULL) {
-    GtkTreeSelection *selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
-    g_signal_handler_disconnect(selection,selection_signal_id);
-    gtk_container_remove(GTK_CONTAINER(grid),view);
-    view=NULL;
-  }
-  if(none_found!=NULL) {
-    gtk_container_remove(GTK_CONTAINER(grid),none_found);
-    none_found=NULL;
-  }
-  g_idle_add(discover,NULL);
-  return TRUE;
+    GdkWindow *window = gtk_widget_get_window(main_window);
+    GdkDisplay *display = gdk_display_get_default();
+    GdkCursor *cursor = gdk_cursor_new_for_display(display, GDK_WATCH);
+    gdk_window_set_cursor(window, cursor);
+
+    if(view!=NULL) {
+        GtkTreeSelection *selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
+        g_signal_handler_disconnect(selection,selection_signal_id);
+        gtk_container_remove(GTK_CONTAINER(grid),view);
+        view=NULL;
+    }
+
+    if(none_found!=NULL) {
+        gtk_container_remove(GTK_CONTAINER(grid),none_found);
+        none_found=NULL;
+    }
+
+    g_idle_add(discover,NULL);
+    return TRUE;
 }
 
 gboolean start_cb(GtkWidget *widget,gpointer data) { 
