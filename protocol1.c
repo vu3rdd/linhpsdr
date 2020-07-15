@@ -522,8 +522,8 @@ static void process_control_bytes() {
     radio->local_ptt=radio->ptt|radio->dot|radio->dash;
   }
   if(previous_ptt!=radio->local_ptt) {
-g_print("process_control_bytes: ppt=%d dot=%d dash=%d\n",radio->ptt,radio->dot,radio->dash);
-    g_idle_add(ext_ptt_changed,(gpointer)radio);
+      g_print("process_control_bytes: ptt=%d dot=%d dash=%d\n",radio->ptt,radio->dot,radio->dash);
+      g_idle_add(ext_ptt_changed,(gpointer)radio);
   }
 
   switch((control_in[0]>>3)&0x1F) {
@@ -1461,7 +1461,10 @@ void ozy_send_buffer() {
         output_buffer[C0]=0x16;
         output_buffer[C1]=0x00;
         if(radio->receivers>=2) {
-          if(radio->discovered->device==DEVICE_HERMES || radio->discovered->device==DEVICE_ANGELIA || radio->discovered->device==DEVICE_ORION || radio->discovered->device==DEVICE_ORION2) {
+          if(radio->discovered->device==DEVICE_HERMES ||
+             radio->discovered->device==DEVICE_ANGELIA ||
+             radio->discovered->device==DEVICE_ORION ||
+             radio->discovered->device==DEVICE_ORION2) {
             /*output_buffer[C1]=0x20|(int)radio->receiver[1]->attenuation;*/
           }
         }
