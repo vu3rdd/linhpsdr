@@ -1529,16 +1529,27 @@ void ozy_send_buffer() {
           }
         }
 
+        fprintf(stderr, "cw_keyer_internal: %d\n", radio->cw_keyer_internal);
+        fprintf(stderr, "tune: %d\n", radio->tune);
+        fprintf(stderr, "tx_mode: %d\n", tx_mode);
+
         output_buffer[C1]=0x00;
-        if(tx_mode!=CWU && tx_mode!=CWL) {
-          // output_buffer[C1]|=0x00;
-        } else {
-          if(radio->tune || radio->vox || !radio->cw_keyer_internal) {
-            output_buffer[C1]|=0x00;
-          } else {
-            output_buffer[C1]|=0x01;
-          }
+        if ((tx_mode == CWU || tx_mode == CWL) &&
+            !radio->tune &&
+            radio->cw_keyer_internal) {
+
+            //output_buffer[C1] = 0x01;
         }
+        /* if(tx_mode!=CWU && tx_mode!=CWL) { */
+        /*   // output_buffer[C1]|=0x00; */
+        /* } else { */
+        /*   if(radio->tune || radio->vox || !radio->cw_keyer_internal) { */
+        /*       output_buffer[C1]|=0x00; */
+        /*   } else { */
+        /*       fprintf(stderr, "************** internal keyer\n"); */
+        /*       output_buffer[C1]|=0x01; */
+        /*   } */
+        /* } */
         output_buffer[C2]=radio->cw_keyer_sidetone_volume;
         output_buffer[C3]=radio->cw_keyer_ptt_delay;
         output_buffer[C4]=0x00;
