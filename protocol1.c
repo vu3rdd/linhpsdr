@@ -1602,16 +1602,20 @@ void ozy_send_buffer() {
     }
   }
 
+  output_buffer[C0]|=0x00;
   if(tx_mode==CWU || tx_mode==CWL) {
     if(radio->tune) {
-      output_buffer[C0]|=0x01;
+        fprintf(stderr, "**************************** set mox\n");
+        output_buffer[C0]|=0x01;
     }
   } else {
     if(isTransmitting(radio)) {
-      output_buffer[C0]|=0x01;
+        fprintf(stderr, "**************************** set mox\n");
+        output_buffer[C0]|=0x01;
     }
   }
 
+  //fprintf(stderr, "output_buffer[C0] = 0x%x\n", output_buffer[C0]);
 #ifdef USBOZY
 //
 // if we have a USB interfaced Ozy device:

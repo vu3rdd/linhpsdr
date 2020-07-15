@@ -737,6 +737,7 @@ static gboolean tune_cb(GtkWidget *widget,gpointer data) {
   }
   r->tune=!r->tune;
   set_button_text_color(widget,r->tune?"red":"black");
+  fprintf(stderr, "r->tune: %d\n", r->tune);
   if(r->tune) {
     switch(radio->transmitter->rx->mode_a) {
       case CWL:
