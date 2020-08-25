@@ -372,13 +372,13 @@ static int check_wisdom(void *data) {
   return 0;
 }
 
-gboolean retry_cb(GtkWidget *widget,gpointer data) {
+gboolean retry_cb(GtkWidget *widget, gpointer data) {
     gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_WATCH));
 
     if(view != NULL) {
         GtkTreeSelection *selection =
             gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
-        g_signal_handler_disconnect(selection,selection_signal_id);
+        g_signal_handler_disconnect(selection, selection_signal_id);
         gtk_container_remove(GTK_CONTAINER(grid),view);
         view = NULL;
     }
