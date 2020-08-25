@@ -502,9 +502,11 @@ static void activate_hpsdr(GtkApplication *app, gpointer data) {
     g_print("opengl: %d\n",opengl);
 
 #ifdef __APPLE__
-  sprintf(png_path,"/usr/local/share/linhpsdr/hpsdr.png");
+    sprintf(png_path1,"/usr/local/share/linhpsdr/hpsdr.png");
 #else
-  sprintf(png_path,"/usr/share/linhpsdr/hpsdr.png");
+    // XXX: hard coded icon path?
+    sprintf(png_path1,"/usr/share/linhpsdr/hpsdr.png");
+    sprintf(png_path2,"./hpsdr.png");
 #endif
   main_window = gtk_application_window_new (app);
   sprintf(title,"LinHPSDR (%s)",version);
