@@ -451,7 +451,7 @@ static void process_control_bytes() {
     gint tx_mode = USB;
 
     RECEIVER *tx_receiver = radio->transmitter->rx;
-    if(tx_receiver ! =NULL) {
+    if(tx_receiver != NULL) {
         if(radio->transmitter->rx->split) {
             tx_mode=tx_receiver->mode_b;
         } else {
