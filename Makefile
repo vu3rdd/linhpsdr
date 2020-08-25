@@ -26,7 +26,7 @@ AUDIO_LIBS=-lasound -lpulse-simple -lpulse -lpulse-mainloop-glib -lsoundio
 #	sudo apt-get install soapysdr-module-rtlsdr
 #	sudo apt-get install soapysdr-module-lms7
 #
-SOAPYSDR_INCLUDE=SOAPYSDR
+# SOAPYSDR_INCLUDE=SOAPYSDR
 
 ifeq ($(SOAPYSDR_INCLUDE),SOAPYSDR)
 SOAPYSDR_OPTIONS=-D SOAPYSDR
