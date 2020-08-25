@@ -338,9 +338,9 @@ static int check_wisdom(void *data) {
       sem_init(wisdom_sem, 0, 0);
 #endif
       wisdom_thread_id = g_thread_new( "Wisdom", wisdom_thread, (gpointer)wisdom_directory);
-      if( ! wisdom_thread_id ) {
+      if(!wisdom_thread_id) {
         g_print("g_thread_new failed for wisdom_thread\n");
-        exit( -1 );
+        exit(-1);
       }
 
       dialog=gtk_dialog_new();
