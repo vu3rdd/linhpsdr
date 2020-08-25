@@ -68,7 +68,8 @@ static GtkWidget *retry;
 static GtkWidget *image_event_box;
 static GtkWidget *image;
 
-static DISCOVERED *d=NULL;
+/* XXX: Global, yuck! */
+static DISCOVERED *d = NULL;
 
 RADIO *radio;
 gboolean opengl=FALSE;
@@ -401,7 +402,8 @@ gboolean start_cb(GtkWidget *widget, gpointer data) {
     gint x=-1;
     gint y=-1;
 
-    if(d!=NULL && d->status==STATE_AVAILABLE) {
+    /* d is a global pointer to struct DISCOVERED (at the top) */
+    if(d != NULL && d->status == STATE_AVAILABLE) {
         switch(d->device) {
 #ifdef SOAPYSDR
         case DEVICE_SOAPYSDR:
