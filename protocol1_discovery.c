@@ -274,39 +274,42 @@ g_print("discover_receive_thread\n");
 void protocol1_discovery() {
     struct ifaddrs *addrs,*ifa;
 
-g_print("protocol1_discovery\n");
+    g_print("protocol1_discovery\n");
+
     getifaddrs(&addrs);
     ifa = addrs;
     while (ifa) {
         g_main_context_iteration(NULL, 0);
-        if (ifa->ifa_addr && (ifa->ifa_addr->sa_family == AF_INET || ifa->ifa_addr->sa_family==AF_LOCAL)) {
+        if (ifa->ifa_addr &&
+            (ifa->ifa_addr->sa_family == AF_INET
+             || ifa->ifa_addr->sa_family==AF_LOCAL)) {
             if((ifa->ifa_flags&IFF_UP)==IFF_UP
-                && (ifa->ifa_flags&IFF_RUNNING)==IFF_RUNNING
-                /*&& (ifa->ifa_flags&IFF_LOOPBACK)!=IFF_LOOPBACK*/) {
+               && (ifa->ifa_flags&IFF_RUNNING)==IFF_RUNNING
+               /*&& (ifa->ifa_flags&IFF_LOOPBACK)!=IFF_LOOPBACK*/) {
                 discover(ifa);
             }
         }
+
         ifa = ifa->ifa_next;
     }
+
     freeifaddrs(addrs);
 
-    g_print( "discovery found %d devices\n",devices);
+    g_print("discovery found %d devices\n",devices);
 
-    int i;
-    for(i=0;i<devices;i++) {
-                    g_print("discovery: found device=%d software_version=%s status=%d address=%s (%02X:%02X:%02X:%02X:%02X:%02X) on %s\n",
-                            discovered[i].device,
-                            discovered[i].software_version,
-                            discovered[i].status,
-                            inet_ntoa(discovered[i].info.network.address.sin_addr),
-                            discovered[i].info.network.mac_address[0],
-                            discovered[i].info.network.mac_address[1],
-                            discovered[i].info.network.mac_address[2],
-                            discovered[i].info.network.mac_address[3],
-                            discovered[i].info.network.mac_address[4],
-                            discovered[i].info.network.mac_address[5],
-                            discovered[i].info.network.interface_name);
+    for(size_t i = 0;i < devices; i++) {
+        g_print("discovery: found device=%d software_version=%s status=%d address=%s (%02X:%02X:%02X:%02X:%02X:%02X) on %s\n",
+                discovered[i].device,
+                discovered[i].software_version,
+                discovered[i].status,
+                inet_ntoa(discovered[i].info.network.address.sin_addr),
+                discovered[i].info.network.mac_address[0],
+                discovered[i].info.network.mac_address[1],
+                discovered[i].info.network.mac_address[2],
+                discovered[i].info.network.mac_address[3],
+                discovered[i].info.network.mac_address[4],
+                discovered[i].info.network.mac_address[5],
+                discovered[i].info.network.interface_name);
     }
-
 }
 
