@@ -1299,6 +1299,8 @@ g_print("output_device: %s\n",device_id);
               input_devices[n_output_devices].index=0;  // not used
               n_output_devices++;
 g_print("output_device: name=%s descr=%s\n",name,descr);
+                }
+                // fprintf(stderr,"output_device: %s\n", device_id);
             }
 fprintf(stderr,"output_device: %s\n",device_id);
           }
