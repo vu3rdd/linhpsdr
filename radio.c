@@ -836,60 +836,60 @@ static gboolean configure_cb(GtkWidget *widget,gpointer data) {
 }
 
 static void create_visual(RADIO *r) {
-  r->visual=gtk_grid_new();
-  gtk_grid_set_row_homogeneous(GTK_GRID(r->visual),TRUE);
-  gtk_grid_set_column_homogeneous(GTK_GRID(r->visual),FALSE);
-  gtk_grid_set_row_spacing(GTK_GRID(r->visual),5);
-  gtk_grid_set_column_spacing(GTK_GRID(r->visual),5);
+  r->visual = gtk_grid_new();
 
+  gtk_grid_set_row_homogeneous(GTK_GRID(r->visual), TRUE);
+  gtk_grid_set_column_homogeneous(GTK_GRID(r->visual), FALSE);
+  gtk_grid_set_row_spacing(GTK_GRID(r->visual), 5);
+  gtk_grid_set_column_spacing(GTK_GRID(r->visual), 5);
 
-  int row=0;
-  int col=0;
+  int row = 0;
+  int col = 0;
 
   if(r->can_transmit) {
-    gtk_grid_attach(GTK_GRID(r->visual),r->transmitter->panadapter,col,row,1,5);
-    col++;
-    row=0;
+      gtk_grid_attach(GTK_GRID(r->visual), r->transmitter->panadapter, col, row, 1, 5);
+      col++;
+      row=0;
 
-    r->mox_button=gtk_toggle_button_new_with_label("MOX");
-    gtk_widget_set_name(r->mox_button,"transmit-warning");
-    //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(r->mox_button)),"circular");
-    g_signal_connect(r->mox_button,"toggled",G_CALLBACK(mox_cb),(gpointer)r);
-    gtk_grid_attach(GTK_GRID(r->visual),r->mox_button,col,row,1,1);
-    row++;
+      r->mox_button = gtk_toggle_button_new_with_label("MOX");
+      gtk_widget_set_name(r->mox_button,"transmit-warning");
+      //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(r->mox_button)),"circular");
+      g_signal_connect(r->mox_button,"toggled",G_CALLBACK(mox_cb),(gpointer)r);
+      gtk_grid_attach(GTK_GRID(r->visual), r->mox_button, col, row, 1, 1);
+      row++;
 
-    r->vox_button=gtk_toggle_button_new_with_label("VOX");
-    gtk_widget_set_name(r->vox_button,"transmit-warning");
-    //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(r->vox_button)),"circular");
-    g_signal_connect(r->vox_button,"toggled",G_CALLBACK(vox_cb),(gpointer)r);
-    gtk_grid_attach(GTK_GRID(r->visual),r->vox_button,col,row,1,1);
-    row++;
+      r->vox_button=gtk_toggle_button_new_with_label("VOX");
+      gtk_widget_set_name(r->vox_button,"transmit-warning");
+      //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(r->vox_button)),"circular");
+      g_signal_connect(r->vox_button, "toggled", G_CALLBACK(vox_cb), (gpointer)r);
+      gtk_grid_attach(GTK_GRID(r->visual), r->vox_button, col, row, 1, 1);
+      row++;
 
-    r->mic_level=create_mic_level(radio->transmitter);
-    gtk_grid_attach(GTK_GRID(r->visual),r->mic_level,col,row,3,1);
-    row++;
+      r->mic_level = create_mic_level(radio->transmitter);
+      gtk_grid_attach(GTK_GRID(r->visual),r->mic_level,col,row,3,1);
+      row++;
   
-    r->mic_gain=create_mic_gain(radio->transmitter);
-    gtk_grid_attach(GTK_GRID(r->visual),r->mic_gain,col,row,3,1);
-    row++;
+      r->mic_gain = create_mic_gain(radio->transmitter);
+      gtk_grid_attach(GTK_GRID(r->visual), r->mic_gain, col, row, 3, 1);
+      row++;
 
-    r->drive_level=create_drive_level(radio->transmitter);
-    gtk_grid_attach(GTK_GRID(r->visual),r->drive_level,col,row,3,1);
+      r->drive_level = create_drive_level(radio->transmitter);
+      gtk_grid_attach(GTK_GRID(r->visual),r->drive_level, col, row, 3, 1);
 
-    col++;
-    row=0;
+      col++;
+      row = 0;
   
-    r->tune_button=gtk_toggle_button_new_with_label("Tune");
-    gtk_widget_set_name(r->tune_button,"transmit-warning");
-    //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(r->tune_button)),"circular");
-    g_signal_connect(r->tune_button,"toggled",G_CALLBACK(tune_cb),(gpointer)r);
-    gtk_grid_attach(GTK_GRID(r->visual),r->tune_button,col,row,1,1);
-    row++;
-
+      r->tune_button = gtk_toggle_button_new_with_label("Tune");
+      gtk_widget_set_name(r->tune_button,"transmit-warning");
+      //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(r->tune_button)),"circular");
+      g_signal_connect(r->tune_button,"toggled",G_CALLBACK(tune_cb),(gpointer)r);
+      gtk_grid_attach(GTK_GRID(r->visual),r->tune_button,col,row,1,1);
+      row++;
   }
 
-  GtkWidget *configure=gtk_button_new_with_label("Configure");
+  GtkWidget *configure = gtk_button_new_with_label("Configure");
   gtk_widget_set_name(configure,"vfo-button");
+
   //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(configure)),"circular");
   g_signal_connect(configure,"clicked",G_CALLBACK(configure_cb),(gpointer)r);
   gtk_grid_attach(GTK_GRID(r->visual),configure,col,row,1,1);
@@ -897,7 +897,7 @@ static void create_visual(RADIO *r) {
   col++;
   row=0;
 
-  add_receiver_b=gtk_button_new_with_label("Add Receiver");
+  add_receiver_b = gtk_button_new_with_label("Add Receiver");
   gtk_widget_set_name(add_receiver_b,"vfo-button");
   //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(add_receiver_b)),"circular");
   g_signal_connect(add_receiver_b,"clicked",G_CALLBACK(add_receiver_cb),(gpointer)r);
@@ -905,7 +905,7 @@ static void create_visual(RADIO *r) {
   gtk_widget_set_sensitive(add_receiver_b,r->receivers<r->discovered->supported_receivers);
   row++;
 
-  add_wideband_b=gtk_button_new_with_label("Add Wideband");
+  add_wideband_b = gtk_button_new_with_label("Add Wideband");
   gtk_widget_set_name(add_wideband_b,"vfo-button");
   //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(add_wideband_b)),"circular");
   g_signal_connect(add_wideband_b,"clicked",G_CALLBACK(add_wideband_cb),(gpointer)r);
@@ -919,113 +919,111 @@ static void create_visual(RADIO *r) {
 }
 
 RADIO *create_radio(DISCOVERED *d) {
-  RADIO *r;
-  int i;
+    RADIO *r;
 
-g_print("create_radio for %s %d\n",d->name,d->device);
+    g_print("create_radio for %s %d\n",d->name,d->device);
 
-  radio=g_new0(RADIO,1);
-  r=radio;
-  r->discovered=d;
-  switch(d->device) {
+    radio = g_new0(RADIO,1);
+    r = radio;
+    r->discovered = d;
+    switch(d->device) {
     case DEVICE_METIS:
-      r->model=ATLAS;
-      break;
+        r->model = ATLAS;
+        break;
     case DEVICE_HERMES:
-      r->model=ANAN_100;
-      break;
+        r->model = ANAN_100;
+        break;
     case DEVICE_HERMES2:
-      r->model=HERMES_2;
-      break;
+        r->model = HERMES_2;
+        break;
     case DEVICE_ANGELIA:
-      r->model=ANAN_100D;
-      break;
+        r->model = ANAN_100D;
+        break;
     case DEVICE_ORION:
-      r->model=ANAN_200D;
-      break;
+        r->model = ANAN_200D;
+        break;
     case DEVICE_ORION2:
-      r->model=ANAN_8000DLE;
-      break;
+        r->model = ANAN_8000DLE;
+        break;
     case DEVICE_HERMES_LITE:
-      r->model=HERMES_LITE;
-      break;
+        r->model = HERMES_LITE;
+        break;
     case DEVICE_HERMES_LITE2:
-      r->model=HERMES_LITE_2;
-      break;      
-      
-      
+        r->model = HERMES_LITE_2;
+        break;
+
     default:
-      r->model=HERMES;
+      r->model = ATLAS;
       break;
   }
 
   switch(r->model) {
     default:
-      r->sample_rate=192000;
-      r->buffer_size=2048;
-      r->alex_rx_antenna=0; // ANT 1
-      r->alex_tx_antenna=0; // ANT 1
+      r->sample_rate = 192000;
+      r->buffer_size = 2048;
+      r->alex_rx_antenna = 0; // ANT 1
+      r->alex_tx_antenna = 0; // ANT 1
       break;
   }
-  r->receivers=0;
+  r->receivers = 0;
   switch(d->device) {
     default:
-      r->meter_calibration=0.0;
-      r->panadapter_calibration=0.0;
+      r->meter_calibration = 0.0;
+      r->panadapter_calibration = 0.0;
       break;
   }
-  
-  for(i=0;i<r->receivers;i++) {
-    r->receiver[i]=NULL;
+
+  for(size_t i = 0; i < r->receivers; i++) {
+      r->receiver[i] = NULL;
   }
-  r->active_receiver=NULL;
-  r->transmitter=NULL;
+  r->active_receiver = NULL;
+  r->transmitter = NULL;
 
-  r->can_transmit=TRUE;
-  
-  r->mox=FALSE;
-  r->tune=FALSE;
-  r->vox=FALSE;
-  r->ptt=FALSE;
-  r->dot=FALSE;
-  r->dash=FALSE;
+  r->can_transmit = TRUE;
 
-  r->atlas_clock_source_128mhz=FALSE;
-  r->atlas_clock_source_10mhz=0;
-  r->classE=FALSE;
+  r->mox = FALSE;
+  r->tune = FALSE;
+  r->vox = FALSE;
+  r->ptt = FALSE;
+  r->dot = FALSE;
+  r->dash = FALSE;
 
-  r->cw_keyer_internal=TRUE;
-  r->cw_keyer_sidetone_frequency=650;
-  r->cw_keyer_sidetone_volume=20;
-  r->cw_keyer_speed=12;
-  r->cw_keyer_mode=KEYER_STRAIGHT;
-  r->cw_keyer_weight=30;
-  r->cw_keyer_spacing=0;
-  r->cw_keyer_ptt_delay=20;
-  r->cw_keyer_hang_time=300;
-  r->cw_keys_reversed=FALSE;
-  r->cw_keys_reversed=FALSE;
-  r->cw_breakin=FALSE;
-  
-  r->cwdaemon=FALSE;
-  
-  #ifdef CWDAEMON
-  r->cwdaemon_running=FALSE;
+  r->atlas_clock_source_128mhz = FALSE;
+  r->atlas_clock_source_10mhz = 0; /* XXX: Why 0, not FALSE? */
+  r->classE = FALSE;
+
+  /* XXX: get the defaults and match with PowerSDR */
+  r->cw_keyer_internal = TRUE;
+  r->cw_keyer_sidetone_frequency = 700;
+  r->cw_keyer_sidetone_volume = 20;
+  r->cw_keyer_speed = 25;
+  r->cw_keyer_mode = KEYER_STRAIGHT;
+  r->cw_keyer_weight = 40;
+  r->cw_keyer_spacing = 0;
+  r->cw_keyer_ptt_delay = 20;
+  r->cw_keyer_hang_time = 300;
+  r->cw_keys_reversed = FALSE;
+  r->cw_breakin = FALSE;
+
+  r->cwdaemon = FALSE;
+
+#ifdef CWDAEMON
+  r->cwdaemon_running = FALSE;
   r->cwd_port = 51000;
-  #endif
-  
-  r->display_filled=TRUE;
+#endif
 
-  r->mic_boost=FALSE;
-  r->mic_ptt_enabled=FALSE;
-  r->mic_bias_enabled=FALSE;
-  r->mic_ptt_tip_bias_ring=FALSE;
+  r->display_filled = TRUE;
 
-  r->microphone_name=NULL;
-  r->local_microphone=FALSE;
-  r->local_microphone_buffer_size=256;
-  r->local_microphone_buffer_offset=0;
-  r->local_microphone_buffer=NULL;
+  r->mic_boost = FALSE;
+  r->mic_ptt_enabled = FALSE;
+  r->mic_bias_enabled = FALSE;
+  r->mic_ptt_tip_bias_ring = FALSE;
+
+  r->microphone_name = NULL;
+  r->local_microphone = FALSE;
+  r->local_microphone_buffer_size = 256;
+  r->local_microphone_buffer_offset = 0;
+  r->local_microphone_buffer = NULL;
 #ifndef __APPLE__
   r->record_handle=NULL;
 #endif
@@ -1035,78 +1033,77 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   g_mutex_init(&r->ring_buffer_mutex);
   g_cond_init(&r->ring_buffer_cond);
 
-  r->filter_board=ALEX;
-  
+  r->filter_board = ALEX;
+
   // Hermes lite 2
   r->enable_pa = TRUE;
   r->psu_clk = TRUE;
 
-  r->adc[0].id=0;
-  r->adc[0].antenna=ANTENNA_1;
-  r->adc[0].filters=AUTOMATIC;
-  r->adc[0].hpf=HPF_13;
-  r->adc[0].lpf=LPF_30_20;
-  r->adc[0].dither=FALSE;
-  r->adc[0].random=FALSE;
-  r->adc[0].preamp=FALSE;
-  r->adc[0].attenuation=0;
+  r->adc[0].id = 0;
+  r->adc[0].antenna = ANTENNA_1;
+  r->adc[0].filters = AUTOMATIC;
+  r->adc[0].hpf = HPF_13;
+  r->adc[0].lpf = LPF_30_20;
+  r->adc[0].dither = FALSE;
+  r->adc[0].random = FALSE;
+  r->adc[0].preamp = FALSE;
+  r->adc[0].attenuation = 0;
   r->adc_overload = 0;
-  
-  r->adc[1].id=1;
-  r->adc[1].antenna=ANTENNA_1;
-  r->adc[1].filters=AUTOMATIC;
-  r->adc[1].hpf=HPF_9_5;
-  r->adc[1].lpf=LPF_60_40;
-  r->adc[1].dither=FALSE;
-  r->adc[1].random=FALSE;
-  r->adc[1].preamp=FALSE;
-  r->adc[1].attenuation=0;
 
-  r->wideband=NULL;
+  r->adc[1].id = 1;
+  r->adc[1].antenna = ANTENNA_1;
+  r->adc[1].filters = AUTOMATIC;
+  r->adc[1].hpf = HPF_9_5;
+  r->adc[1].lpf = LPF_60_40;
+  r->adc[1].dither = FALSE;
+  r->adc[1].random = FALSE;
+  r->adc[1].preamp = FALSE;
+  r->adc[1].attenuation = 0;
 
-  r->vox_enabled=FALSE;
-  r->vox_threshold=0.10;
-  r->vox_hang=250;
+  r->wideband = NULL;
 
-  r->region=REGION_OTHER;
+  r->vox_enabled = FALSE;
+  r->vox_threshold = 0.10;
+  r->vox_hang = 250;
 
-  r->iqswap=FALSE;
+  r->region = REGION_OTHER;
 
-  r->which_audio=USE_SOUNDIO;
-  r->which_audio_backend=0;
+  r->iqswap = FALSE;
+
+  r->which_audio = USE_SOUNDIO;
+  r->which_audio_backend = 0;
 
   r->swr_alarm_value = 2.0;
-  r->temperature_alarm_value = 42;  
+  r->temperature_alarm_value = 42;
   r->midi_enabled = FALSE;
   sprintf(r->midi_filename,"%s/.local/share/linhpsdr/midi.props", g_get_home_dir());
-  
-  r->dialog=NULL;
 
+  r->dialog = NULL;
 
   radio_restore_state(r);
 
   radio_change_region(r);
 
-
-  create_audio(r->which_audio_backend,r->which_audio==USE_SOUNDIO?audio_get_backend_name(r->which_audio_backend):NULL);
+  create_audio(r->which_audio_backend,
+               r->which_audio == USE_SOUNDIO ?
+               audio_get_backend_name(r->which_audio_backend):NULL);
 
   add_receivers(r);
 
   switch(r->discovered->protocol) {
-    case PROTOCOL_1:
-    case PROTOCOL_2:
+  case PROTOCOL_1:
+  case PROTOCOL_2:
       add_transmitter(r);
       break;
   }
 
-
   create_visual(r);
 
   switch(r->discovered->protocol) {
-    case PROTOCOL_1:
+  case PROTOCOL_1:
       protocol1_init(r);
       break;
-    case PROTOCOL_2:
+  case PROTOCOL_2:
       protocol2_init(r);
       break;
   }
@@ -1118,7 +1115,7 @@ g_print("create_radio for %s %d\n",d->name,d->device);
     }
   }
   */
-  
+
   //
   // MIDIstartup must not be called before the radio is completely set up, since
   // then MIDI can asynchronously trigger actions which require the radio already
@@ -1126,12 +1123,11 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   //
 #ifdef MIDI
   if(r->midi_enabled) {
-    r->midi_enabled=(MIDIstartup(r->midi_filename)==0);
+      r->midi_enabled=(MIDIstartup(r->midi_filename)==0);
   }
-#endif  
-  
-  g_idle_add(radio_start,(gpointer)r);
+#endif
 
+  g_idle_add(radio_start,(gpointer)r);
 
   return r;
 }

@@ -387,8 +387,8 @@ gboolean start_cb(GtkWidget *widget, gpointer data) {
                        d->info.network.mac_address[3],
                        d->info.network.mac_address[4],
                        d->info.network.mac_address[5]);
-            strcpy(ip,inet_ntoa(d->info.network.address.sin_addr));
-            if(d->protocol==0) {
+            strcpy(ip, inet_ntoa(d->info.network.address.sin_addr));
+            if(d->protocol == 0) {
                 strcpy(protocol,"P1");
             } else {
                 strcpy(protocol,"P2");
@@ -406,15 +406,19 @@ gboolean start_cb(GtkWidget *widget, gpointer data) {
                    iface);
 
         g_print("starting %s\n",title);
-        gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_WATCH));
+        gdk_window_set_cursor(gtk_widget_get_window(main_window), gdk_cursor_new(GDK_WATCH));
         gtk_widget_set_name(main_window,"receiver-window");
         gtk_window_set_title(GTK_WINDOW (main_window),title);
-        while(gtk_events_pending()) gtk_main_iteration();
 
-        radio=create_radio(d);
+        while(gtk_events_pending())
+            gtk_main_iteration();
+
+        radio = create_radio(d);
+
         gtk_container_remove(GTK_CONTAINER(grid),view);
         gtk_container_remove(GTK_CONTAINER(grid),start);
         gtk_container_remove(GTK_CONTAINER(grid),retry);
+
         gtk_grid_attach(GTK_GRID(grid), radio->visual, 1, 0, 4, 1);
         gtk_widget_show_all(grid);
 
