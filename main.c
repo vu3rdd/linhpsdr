@@ -561,25 +561,28 @@ static void activate_hpsdr(GtkApplication *app, gpointer data) {
 }
 
 int main(int argc, char **argv) {
-  GtkApplication *hpsdr;
-  char text[1024];
-  int rc;
-  const char *homedir;
+    GtkApplication *hpsdr;
+    char text[1024];
+    int rc;
+    const char *homedir;
 
-  if((homedir=getenv("HOME"))==NULL) {
-    homedir=getpwuid(getuid())->pw_dir;
-  }
-  sprintf(text,"%s/.local",homedir);
-  rc=mkdir(text,0777);
-  sprintf(text,"%s/.local/share",homedir);
-  rc=mkdir(text,0777);
-  sprintf(text,"%s/.local/share/linhpsdr",homedir);
-  rc=mkdir(text,0777);
+    if((homedir = getenv("HOME")) == NULL) {
+        homedir = getpwuid(getuid())->pw_dir;
+    }
 
-  sprintf(text,"org.g0orx.hpsdr.pid%d",getpid());
-  hpsdr=gtk_application_new(text, G_APPLICATION_FLAGS_NONE);
-  g_signal_connect(hpsdr, "activate", G_CALLBACK(activate_hpsdr), NULL);
-  rc=g_application_run(G_APPLICATION(hpsdr), argc, argv);
-  g_object_unref(hpsdr);
-  return rc;
+    /* make ~/.local/share/linhpsdr */
+    sprintf(text,"%s/.local", homedir);
+    rc = mkdir(text,0777);
+    sprintf(text, "%s/.local/share", homedir);
+    rc = mkdir(text, 0777);
+    sprintf(text,"%s/.local/share/linhpsdr", homedir);
+    rc = mkdir(text, 0777);
+
+    sprintf(text,"org.g0orx.hpsdr.pid%d", getpid());
+    hpsdr = gtk_application_new(text, G_APPLICATION_FLAGS_NONE);
+
+    g_signal_connect(hpsdr, "activate", G_CALLBACK(activate_hpsdr), NULL);
+    rc = g_application_run(G_APPLICATION(hpsdr), argc, argv);
+    g_object_unref(hpsdr);
+    return rc;
 }
