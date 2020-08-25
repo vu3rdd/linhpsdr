@@ -198,125 +198,125 @@ fprintf(stderr,"tree_selection_changed_cb: next=%s,%s,%s,%s,%s\n",temp_name,temp
 }
 
 static int discover(void *data) {
-  char v[32];
-  char mac[32];
-  char protocol[32];
-  char ip[32];
-  char iface[32];
-  gint i;
-  GtkCellRenderer *renderer;
-  GtkTreeIter iter;
-  GtkTreeIter iter0;
+    char v[32];
+    char mac[32];
+    char protocol[32];
+    char ip[32];
+    char iface[32];
+    gint i;
+    GtkCellRenderer *renderer;
+    GtkTreeIter iter;
+    GtkTreeIter iter0;
 
-  discovery();
-  g_print("main: discovery found %d devices\n",devices);
+    discovery();
+    g_print("main: discovery found %d devices\n",devices);
 
-  if(devices>0) {
-    view=gtk_tree_view_new();
+    if(devices>0) {
+        view=gtk_tree_view_new();
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Device", renderer, "text", NAME_COLUMN, NULL);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Device", renderer, "text", NAME_COLUMN, NULL);
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Protocol", renderer, "text", PROTOCOL_COLUMN, NULL);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Protocol", renderer, "text", PROTOCOL_COLUMN, NULL);
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Version", renderer, "text", VERSION_COLUMN, NULL);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Version", renderer, "text", VERSION_COLUMN, NULL);
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "IP", renderer, "text", IP_COLUMN, NULL);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "IP", renderer, "text", IP_COLUMN, NULL);
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "MAC", renderer, "text", MAC_COLUMN, NULL);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "MAC", renderer, "text", MAC_COLUMN, NULL);
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "IFACE", renderer, "text", INTERFACE_COLUMN, NULL);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "IFACE", renderer, "text", INTERFACE_COLUMN, NULL);
 
-    renderer=gtk_cell_renderer_text_new();
-    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Status", renderer, "text", STATUS_COLUMN, NULL);
-
-
-    store=gtk_list_store_new(N_COLUMNS,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING);
+        renderer=gtk_cell_renderer_text_new();
+        gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(view), -1, "Status", renderer, "text", STATUS_COLUMN, NULL);
 
 
-    for(i=0;i<devices;i++) {
-      d=&discovered[i];
+        store=gtk_list_store_new(N_COLUMNS,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING);
 
-g_print("discovered: %d device=%d\n",i,discovered[i].device);
 
-      switch(d->device) {
+        for(i=0;i<devices;i++) {
+            d=&discovered[i];
+
+            g_print("discovered: %d device=%d\n",i,discovered[i].device);
+
+            switch(d->device) {
 #ifdef SOAPYSDR
-        case DEVICE_SOAPYSDR:
-          if(strcmp(d->name,"rtlsdr")==0) {
-            sprintf(mac,"%d",d->info.soapy.rtlsdr_count);
-          } else {
-            strcpy(mac,"");
-          }
-          strcpy(ip,d->info.soapy.address);
-          strcpy(iface,"");
-          break;
+            case DEVICE_SOAPYSDR:
+                if(strcmp(d->name,"rtlsdr")==0) {
+                    sprintf(mac,"%d",d->info.soapy.rtlsdr_count);
+                } else {
+                    strcpy(mac,"");
+                }
+                strcpy(ip,d->info.soapy.address);
+                strcpy(iface,"");
+                break;
 #endif
-        default:
-          sprintf(mac,"%02X:%02X:%02X:%02X:%02X:%02X",
-            d->info.network.mac_address[0],
-            d->info.network.mac_address[1],
-            d->info.network.mac_address[2],
-            d->info.network.mac_address[3],
-            d->info.network.mac_address[4],
-            d->info.network.mac_address[5]);
-          strcpy(ip,inet_ntoa(d->info.network.address.sin_addr));
-          strcpy(iface,d->info.network.interface_name);
-          break;
-      }
+            default:
+                sprintf(mac,"%02X:%02X:%02X:%02X:%02X:%02X",
+                        d->info.network.mac_address[0],
+                        d->info.network.mac_address[1],
+                        d->info.network.mac_address[2],
+                        d->info.network.mac_address[3],
+                        d->info.network.mac_address[4],
+                        d->info.network.mac_address[5]);
+                strcpy(ip,inet_ntoa(d->info.network.address.sin_addr));
+                strcpy(iface,d->info.network.interface_name);
+                break;
+            }
 
-      if(d->protocol==PROTOCOL_1) {
-        strcpy(protocol,"1");
-      } else if(d->protocol==PROTOCOL_2) {
-        strcpy(protocol,"2");
+            if(d->protocol==PROTOCOL_1) {
+                strcpy(protocol,"1");
+            } else if(d->protocol==PROTOCOL_2) {
+                strcpy(protocol,"2");
 #ifdef SOAPYSDR
-      } else if(d->protocol==PROTOCOL_SOAPYSDR) {
-        strcpy(protocol,"SoapySDR");
+            } else if(d->protocol==PROTOCOL_SOAPYSDR) {
+                strcpy(protocol,"SoapySDR");
 #endif
-      } else {
-        strcpy(protocol,"UNKNOWN");
-      }
+            } else {
+                strcpy(protocol,"UNKNOWN");
+            }
      
 
-g_print("adding %s\n",d->name);
-      gtk_list_store_append(store,i==0?&iter0:&iter);
-      gtk_list_store_set(store,i==0?&iter0:&iter,
-        NAME_COLUMN, d->name,
-        PROTOCOL_COLUMN, protocol,
-        VERSION_COLUMN, d->software_version,
-        IP_COLUMN, ip,
-        MAC_COLUMN, mac,
-        INTERFACE_COLUMN, iface,
-        STATUS_COLUMN, d->status==2?"Idle":"In Use",
-        -1);
+            g_print("adding %s\n",d->name);
+            gtk_list_store_append(store,i==0?&iter0:&iter);
+            gtk_list_store_set(store,i==0?&iter0:&iter,
+                               NAME_COLUMN, d->name,
+                               PROTOCOL_COLUMN, protocol,
+                               VERSION_COLUMN, d->software_version,
+                               IP_COLUMN, ip,
+                               MAC_COLUMN, mac,
+                               INTERFACE_COLUMN, iface,
+                               STATUS_COLUMN, d->status==2?"Idle":"In Use",
+                               -1);
+        }
+
+        gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(store));
+
+        gtk_grid_attach(GTK_GRID(grid), view, 1, 0, 4, 1);
+        GtkTreeSelection *selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
+        gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+
+        selection_signal_id=g_signal_connect(G_OBJECT(selection),"changed",G_CALLBACK(tree_selection_changed_cb),NULL);
+        gtk_tree_selection_unselect_all(selection);
+        gtk_tree_selection_select_iter(selection,&iter0);
+
+    } else {
+        gtk_widget_set_sensitive(start, FALSE);
+        none_found=gtk_label_new("No HPSDR devices found");
+        gtk_grid_attach(GTK_GRID(grid), none_found, 1, 0, 4, 1);
     }
 
-    gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(store));
+    //gtk_widget_show_all(grid);
+    gtk_widget_show_all(main_window);
 
-    gtk_grid_attach(GTK_GRID(grid), view, 1, 0, 4, 1); 
-    GtkTreeSelection *selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
-    gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+    gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_ARROW));
 
-    selection_signal_id=g_signal_connect(G_OBJECT(selection),"changed",G_CALLBACK(tree_selection_changed_cb),NULL);
-    gtk_tree_selection_unselect_all(selection);
-    gtk_tree_selection_select_iter(selection,&iter0);
-
-  } else {
-    gtk_widget_set_sensitive(start, FALSE);
-    none_found=gtk_label_new("No HPSDR devices found");
-    gtk_grid_attach(GTK_GRID(grid), none_found, 1, 0, 4, 1); 
-  }
-
-  //gtk_widget_show_all(grid);
-  gtk_widget_show_all(main_window);
-
-  gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_ARROW));
-
-  return 0;
+    return 0;
 }
 
 static gboolean wisdom_delete(GtkWidget *widget) {
