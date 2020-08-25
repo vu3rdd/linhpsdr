@@ -32,10 +32,12 @@
 #endif
 
 void discovery() {
-g_print("discovery\n");
-  devices=0;
-  protocol1_discovery();
-  protocol2_discovery();
+    g_print("discovery\n");
+
+    devices = 0;
+    protocol1_discovery();
+    protocol2_discovery();
+
 #ifdef SOAPYSDR
   soapy_discovery();
 #endif
