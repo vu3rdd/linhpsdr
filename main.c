@@ -325,7 +325,7 @@ static gboolean wisdom_delete(GtkWidget *widget) {
 
 static int check_wisdom(void *data) {
   char wisdom_directory[1024];
-  char wisdom_file[1024];
+  char wisdom_file[1034];
   GtkWidget *dialog;
   char label[128];
 
@@ -393,7 +393,7 @@ gboolean retry_cb(GtkWidget *widget, gpointer data) {
 gboolean start_cb(GtkWidget *widget, gpointer data) {
     char mac[32];
     char ip[32];
-    char iface[64];
+    char iface[67];
     char protocol[32];
     gchar title[128];
     char *value;
