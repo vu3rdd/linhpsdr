@@ -199,7 +199,6 @@ fprintf(stderr,"tree_selection_changed_cb: next=%s,%s,%s,%s,%s\n",temp_name,temp
 }
 
 static int discover(void *data) {
-    char v[32];
     char mac[32];
     char protocol[32];
     char ip[32];
@@ -392,7 +391,6 @@ gboolean retry_cb(GtkWidget *widget, gpointer data) {
 }
 
 gboolean start_cb(GtkWidget *widget, gpointer data) {
-    char v[32];
     char mac[32];
     char ip[32];
     char iface[64];
