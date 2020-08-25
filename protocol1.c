@@ -443,99 +443,99 @@ static gpointer receive_thread(gpointer arg) {
 }
 
 static void process_control_bytes() {
-  gboolean previous_ptt;
-  // Unused - commented in case used in future
-  //gboolean previous_dot;
-  //gboolean previous_dash;
+    gboolean previous_ptt;
+    // Unused - commented in case used in future
+    //gboolean previous_dot;
+    //gboolean previous_dash;
 
-  gint tx_mode=USB;
+    gint tx_mode = USB;
 
-  RECEIVER *tx_receiver=radio->transmitter->rx;
-  if(tx_receiver!=NULL) {
-    if(radio->transmitter->rx->split) {
-      tx_mode=tx_receiver->mode_b;
-    } else {
-      tx_mode=tx_receiver->mode_a;
-    }
-  }
-
-  previous_ptt=radio->local_ptt;
-  //previous_dot=radio->dot;
-  //previous_dash=radio->dash;
-  radio->ptt=(control_in[0]&0x01)==0x01;
-  //radio->dash=(control_in[0]&0x02)==0x02;
-  //radio->dot=(control_in[0]&0x04)==0x04;
-
-  radio->local_ptt=radio->ptt;
-  if(tx_mode==CWL || tx_mode==CWU) {
-    radio->local_ptt=radio->ptt|radio->dot|radio->dash;
-  }
-  if(previous_ptt!=radio->local_ptt) {
-g_print("process_control_bytes: ppt=%d dot=%d dash=%d\n",radio->ptt,radio->dot,radio->dash);
-    g_idle_add(ext_ptt_changed,(gpointer)radio);
-  }
-
-
-  
-  switch((control_in[0]>>3)&0x1F) {
-    case 0:
-      radio->adc_overload=(control_in[1]&0x01)==0x01;
-      radio->IO1=(control_in[1]&0x02)==0x02;
-      radio->IO2=(control_in[1]&0x04)==0x04;
-      radio->IO3=(control_in[1]&0x08)==0x08;
-      
-      
-      //HL2 Buffer over/underflow
-      #ifdef CWDAEMON
-      if ((radio->ptt) || keytx) {
-          int recov = (control_in[3]&0x40) == 0x40;
-          int msb = (control_in[3]&0x80) == 0x80;
-          if (msb == 1) {
-            g_print("Buffer recovery %d %d\n", recov, msb);
-          }   
-      }    
-      #endif
-      //}
-      
-      if(radio->mercury_software_version!=control_in[2]) {
-        radio->mercury_software_version=control_in[2];
-        fprintf(stderr,"  Mercury Software version: %d (0x%0X)\n",radio->mercury_software_version,radio->mercury_software_version);
-      }
-      if(radio->penelope_software_version!=control_in[3]) {
-        radio->penelope_software_version=control_in[3];
-
-        
-        if(radio->discovered->device!=DEVICE_HERMES_LITE2) {        
-          fprintf(stderr,"  Penelope Software version: %d (0x%0X)\n",radio->penelope_software_version,radio->penelope_software_version);          
+    RECEIVER *tx_receiver = radio->transmitter->rx;
+    if(tx_receiver ! =NULL) {
+        if(radio->transmitter->rx->split) {
+            tx_mode=tx_receiver->mode_b;
+        } else {
+            tx_mode = tx_receiver->mode_a;
         }
-      }
-      if(radio->ozy_software_version!=control_in[4]) {
-        radio->ozy_software_version=control_in[4];
-        fprintf(stderr,"FPGA firmware version: %d.%d\n",radio->ozy_software_version/10,radio->ozy_software_version%10);
-      }
-      break;
-    case 1:
-      radio->transmitter->exciter_power=((control_in[1]&0xFF)<<8)|(control_in[2]&0xFF); // from Penelope or Hermes
-      
-      int adc = ((control_in[1]&0xFF)<<8)|(control_in[2]&0xFF);
+    }
 
-      double this_temperature = (3.26 * ((double)adc/4096.0) - 0.5) / 0.01;    
-      // Exponential moving average filter
-      double alpha = 0.7;
-      radio->transmitter->temperature = (alpha * this_temperature) + (1 - alpha) * radio->transmitter->temperature;
+    previous_ptt = radio->local_ptt;
+    //previous_dot=radio->dot;
+    //previous_dash=radio->dash;
+    radio->ptt=(control_in[0]&0x01)==0x01;
+    //radio->dash=(control_in[0]&0x02)==0x02;
+    //radio->dot=(control_in[0]&0x04)==0x04;
+
+    radio->local_ptt=radio->ptt;
+    if(tx_mode==CWL || tx_mode==CWU) {
+        radio->local_ptt=radio->ptt|radio->dot|radio->dash;
+    }
+    if(previous_ptt!=radio->local_ptt) {
+        g_print("process_control_bytes: ppt=%d dot=%d dash=%d\n",radio->ptt,radio->dot,radio->dash);
+        g_idle_add(ext_ptt_changed,(gpointer)radio);
+    }
+  
+    switch((control_in[0] >> 3) & 0x1F) {
+    case 0:
+        radio->adc_overload = (control_in[1] & 0x01) == 0x01;
+        radio->IO1 = (control_in[1] & 0x02) == 0x02;
+        radio->IO2 = (control_in[1] & 0x04) == 0x04;
+        radio->IO3 = (control_in[1] & 0x08) == 0x08;
       
+        //HL2 Buffer over/underflow
+#ifdef CWDAEMON
+        if ((radio->ptt) || keytx) {
+            int recov = (control_in[3]&0x40) == 0x40;
+            int msb = (control_in[3]&0x80) == 0x80;
+            if (msb == 1) {
+                g_print("Buffer recovery %d %d\n", recov, msb);
+            }
+        }
+#endif
+        //}
       
-      radio->transmitter->alex_forward_power=((control_in[3]&0xFF)<<8)|(control_in[4]&0xFF); // from Alex or Apollo
-      break;
+        if(radio->mercury_software_version != control_in[2]) {
+            radio->mercury_software_version = control_in[2];
+            fprintf(stderr,"  Mercury Software version: %d (0x%0X)\n",radio->mercury_software_version,radio->mercury_software_version);
+        }
+
+        if(radio->penelope_software_version != control_in[3]) {
+            radio->penelope_software_version = control_in[3];
+
+            if(radio->discovered->device != DEVICE_HERMES_LITE2) {
+                fprintf(stderr,"  Penelope Software version: %d (0x%0X)\n",radio->penelope_software_version,radio->penelope_software_version);     
+            }
+        }
+
+        if(radio->ozy_software_version != control_in[4]) {
+            radio->ozy_software_version = control_in[4];
+            fprintf(stderr,"FPGA firmware version: %d.%d\n",radio->ozy_software_version/10,radio->ozy_software_version%10);
+        }
+        break;
+    case 1:
+        radio->transmitter->exciter_power =
+            ((control_in[1] & 0xFF) << 8) | (control_in[2] & 0xFF); // from Penelope or Hermes
+
+        int adc = ((control_in[1] & 0xFF) << 8) | (control_in[2] & 0xFF);
+
+        double this_temperature = (3.26 * ((double)adc / 4096.0) - 0.5) / 0.01;
+        // Exponential moving average filter
+        double alpha = 0.7;
+        radio->transmitter->temperature = (alpha * this_temperature) + (1 - alpha) * radio->transmitter->temperature;
+
+        radio->transmitter->alex_forward_power =
+            ((control_in[3] & 0xFF) << 8) | (control_in[4] & 0xFF); // from Alex or Apollo
+        break;
     case 2:
-      radio->transmitter->alex_reverse_power=((control_in[1]&0xFF)<<8)|(control_in[2]&0xFF); // from Alex or Apollo
-      radio->AIN3=(control_in[3]<<8)+control_in[4]; // from Pennelope or Hermes
-      break;
+        radio->transmitter->alex_reverse_power =
+            ((control_in[1] & 0xFF) << 8) | (control_in[2] & 0xFF); // from Alex or Apollo
+        radio->AIN3 = (control_in[3] << 8) + control_in[4]; // from Pennelope or Hermes
+        break;
     case 3:
-      radio->AIN4=(control_in[1]<<8)+control_in[2]; // from Pennelope or Hermes
-      radio->AIN6=(control_in[3]<<8)+control_in[4]; // from Pennelope or Hermes
-      break;
-  }
+        radio->AIN4 = (control_in[1] << 8) + control_in[2]; // from Pennelope or Hermes
+        radio->AIN6 = (control_in[3] << 8) + control_in[4]; // from Pennelope or Hermes
+        break;
+    }
 }
 
 static int nreceiver;
