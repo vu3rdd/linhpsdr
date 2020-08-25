@@ -203,7 +203,6 @@ static int discover(void *data) {
     char protocol[32];
     char ip[32];
     char iface[32];
-    gint i;
     GtkCellRenderer *renderer;
     GtkTreeIter iter;
     GtkTreeIter iter0;
@@ -239,10 +238,10 @@ static int discover(void *data) {
         store=gtk_list_store_new(N_COLUMNS,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING,G_TYPE_STRING);
 
 
-        for(i=0;i<devices;i++) {
+        for(size_t i=0; i < devices; i++) {
             d=&discovered[i];
 
-            g_print("discovered: %d device=%d\n",i,discovered[i].device);
+            g_print("discovered: %ld device=%d\n",i,discovered[i].device);
 
             switch(d->device) {
 #ifdef SOAPYSDR
