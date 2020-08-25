@@ -46,9 +46,6 @@
 #include "tx_panadapter.h"
 #include "protocol1.h"
 #include "protocol2.h"
-#ifdef SOAPYSDR
-#include "soapy_protocol.h"
-#endif
 #include "main.h"
 #include "configure_dialog.h"
 #include "audio.h"
@@ -97,13 +94,6 @@ void radio_save_state(RADIO *radio) {
   char filename[128];
   switch(radio->discovered->protocol) {
     
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      sprintf(filename,"%s/.local/share/linhpsdr/%s.props",
-                        g_get_home_dir(),
-                        radio->discovered->name);
-      break;
-#endif
     default:
       sprintf(filename,"%s/.local/share/linhpsdr/%02X-%02X-%02X-%02X-%02X-%02X.props",
                         g_get_home_dir(),
@@ -196,23 +186,6 @@ g_print("radio_save_state: %s\n",filename);
     sprintf(name,"radio.adc[%d].attenuation",i);
     sprintf(value,"%d",radio->adc[i].attenuation);
     setProperty(name,value);
-
-#ifdef SOAPYSDR
-    if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-      sprintf(name,"radio.adc[%d].gain",i);
-      sprintf(value,"%f", radio->adc[0].gain);
-      setProperty(name,value);
-      sprintf(name,"radio.adc[%d].agc",i);
-      sprintf(value,"%d", soapy_protocol_get_automatic_gain(&radio->adc[0]));
-      setProperty(name,value);
-      sprintf(name,"radio.dac[%d].gain",i);
-      sprintf(value,"%f", radio->dac[0].gain);
-      setProperty(name,value);
-      sprintf(name,"radio.dac[%d].antenna",i);
-      sprintf(value,"%d", radio->dac[0].antenna);
-      setProperty(name,value);
-    }
-#endif
   }
 
   sprintf(value,"%d",radio->filter_board);
@@ -283,13 +256,6 @@ void radio_restore_state(RADIO *radio) {
   char *value;
   char filename[128];
   switch(radio->discovered->protocol) {
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      sprintf(filename,"%s/.local/share/linhpsdr/%s.props",
-                        g_get_home_dir(),
-                        radio->discovered->name);
-      break;
-#endif
     default:
       sprintf(filename,"%s/.local/share/linhpsdr/%02X-%02X-%02X-%02X-%02X-%02X.props",
                         g_get_home_dir(),
@@ -361,24 +327,6 @@ void radio_restore_state(RADIO *radio) {
     value=getProperty(name);
     if(value!=NULL) radio->adc[i].attenuation=atoi(value);
 
-#ifdef SOAPYSDR
-    if(radio->discovered->device==DEVICE_SOAPYSDR) {
-      sprintf(name,"radio.adc[%d].gain",i);
-      value=getProperty(name);
-      if(value!=NULL) radio->adc[i].gain=atof(value);
-      sprintf(name,"radio.adc[%d].agc",i);
-      value=getProperty(name);
-      if(value!=NULL) radio->adc[i].agc=atoi(value);
-      if(radio->can_transmit) {
-        sprintf(name,"radio.dac[%d].gain",i);
-        value=getProperty(name);
-        if(value!=NULL) radio->dac[i].gain=atof(value);
-        sprintf(name,"radio.dac[%d].antenna",i);
-        value=getProperty(name);
-        if(value!=NULL) radio->dac[i].antenna=atoi(value);
-      }
-    }
-#endif
   }
 
   value=getProperty("radio.local_microphone");
@@ -532,18 +480,9 @@ void frequency_changed(RECEIVER *rx) {
     }
     SetRXAShiftFreq(rx->channel, (double)offset);
     RXANBPSetShiftFrequency(rx->channel, (double)offset);
-#ifdef SOAPYSDR
-    if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-      // delay setting tx frequency until transmit
-    }
-#endif
   } else {
     if(radio->discovered->protocol==PROTOCOL_2) {
       protocol2_high_priority();
-#ifdef SOAPYSDR
-    } else if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-      soapy_protocol_set_rx_frequency(rx);
-#endif
     }
     rx->band_a=get_band_from_frequency(rx->frequency_a);
   }
@@ -645,11 +584,6 @@ g_print("%s: isTransmitting=%d\n",__FUNCTION__,isTransmitting(r));
         protocol2_high_priority();
         protocol2_receive_specific();
         break;
-#ifdef SOAPYSDR
-      case PROTOCOL_SOAPYSDR:
-        soapy_protocol_set_tx_frequency(r->transmitter);
-        break;
-#endif
     }
   } else {
     SetChannelState(r->transmitter->channel,0,1);
@@ -667,11 +601,6 @@ g_print("%s: isTransmitting=%d\n",__FUNCTION__,isTransmitting(r));
         protocol2_high_priority();
         protocol2_receive_specific();
         break;
-#ifdef SOAPYSDR
-      case PROTOCOL_SOAPYSDR:
-        //soapy_protocol_stop_transmitter(r->transmitter);
-        break;
-#endif
     }
     update_tx_panadapter(r);
   }
@@ -823,11 +752,6 @@ void add_receivers(RADIO *r) {
       case PROTOCOL_2:
         protocol2_start_receiver(r->receiver[0]);
         break;
-#ifdef SOAPYSDR
-      case PROTOCOL_SOAPYSDR:
-        soapy_protocol_create_receiver(r->receiver[0]);
-        break;
-#endif
       default:
         break;
     }
@@ -842,11 +766,6 @@ void add_receivers(RADIO *r) {
           case PROTOCOL_2:
             protocol2_start_receiver(r->receiver[i]);
             break;
-#ifdef SOAPYSDR
-          case PROTOCOL_SOAPYSDR:
-            soapy_protocol_create_receiver(r->receiver[i]);
-            break;
-#endif
           default:
             break;
         }
@@ -1035,28 +954,12 @@ g_print("create_radio for %s %d\n",d->name,d->device);
       break;      
       
       
-#ifdef SOAPYSDR
-    case DEVICE_SOAPYSDR:
-      r->model=SOAPYSDR;
-      break;
-#endif
     default:
       r->model=HERMES;
       break;
   }
 
   switch(r->model) {
-#ifdef SOAPYSDR
-    case SOAPYSDR:
-      r->sample_rate=r->discovered->info.soapy.sample_rate;
-      if(r->sample_rate==0) {
-        r->sample_rate=768000;
-      }
-      r->buffer_size=2048;
-      r->alex_rx_antenna=3; // LNAW
-      r->alex_tx_antenna=0; // ANT 1
-      break;
-#endif
     default:
       r->sample_rate=192000;
       r->buffer_size=2048;
@@ -1066,12 +969,6 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   }
   r->receivers=0;
   switch(d->device) {
-#ifdef SOAPYSDR
-    case DEVICE_SOAPYSDR:
-      r->meter_calibration=-20.0;
-      r->panadapter_calibration=-20.0;
-      break;
-#endif
     default:
       r->meter_calibration=0.0;
       r->panadapter_calibration=0.0;
@@ -1085,11 +982,6 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   r->transmitter=NULL;
 
   r->can_transmit=TRUE;
-#ifdef SOAPYSDR
-  if(r->discovered->protocol==PROTOCOL_SOAPYSDR) {
-    r->can_transmit=r->discovered->info.soapy.tx_channels>0;
-  }
-#endif
   
   r->mox=FALSE;
   r->tune=FALSE;
@@ -1160,16 +1052,6 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   r->adc[0].attenuation=0;
   r->adc_overload = 0;
   
-#ifdef SOAPYSDR
-  if(r->discovered->device==DEVICE_SOAPYSDR) {
-    r->adc[0].gain=20;
-    r->adc[0].agc=FALSE;
-    if(r->can_transmit) {
-      r->dac[0].antenna=radio->discovered->info.soapy.rx_antennas-1;
-      r->dac[0].gain=20;
-    }
-  }
-#endif
   r->adc[1].id=1;
   r->adc[1].antenna=ANTENNA_1;
   r->adc[1].filters=AUTOMATIC;
@@ -1179,16 +1061,6 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   r->adc[1].random=FALSE;
   r->adc[1].preamp=FALSE;
   r->adc[1].attenuation=0;
-#ifdef SOAPYSDR
-  if(r->discovered->device==DEVICE_SOAPYSDR) {
-    r->adc[1].gain=20;
-    r->adc[1].agc=FALSE;
-    if(r->can_transmit) {
-      r->dac[0].antenna=radio->discovered->info.soapy.rx_antennas-1;
-      r->dac[1].gain=20;
-    }
-  }
-#endif
 
   r->wideband=NULL;
 
@@ -1215,11 +1087,6 @@ g_print("create_radio for %s %d\n",d->name,d->device);
 
   radio_change_region(r);
 
-#ifdef SOAPYSDR
-  if(r->discovered->protocol==PROTOCOL_SOAPYSDR) {
-    soapy_protocol_init(r,0);
-  }
-#endif
 
   create_audio(r->which_audio_backend,r->which_audio==USE_SOUNDIO?audio_get_backend_name(r->which_audio_backend):NULL);
 
@@ -1230,13 +1097,6 @@ g_print("create_radio for %s %d\n",d->name,d->device);
     case PROTOCOL_2:
       add_transmitter(r);
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      if(r->discovered->info.soapy.tx_channels>0) {
-        add_transmitter(r);
-      }
-      break;
-#endif
   }
 
 
@@ -1249,36 +1109,8 @@ g_print("create_radio for %s %d\n",d->name,d->device);
     case PROTOCOL_2:
       protocol2_init(r);
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      soapy_protocol_set_rx_antenna(radio->receiver[0],radio->adc[0].antenna);
-      for(int i=0;i<radio->discovered->info.soapy.rx_gains;i++) {
-        soapy_protocol_set_gain(&radio->adc[0]);
-      } 
-      RECEIVER *rx=r->receiver[0];
-      double f=(double)(rx->frequency_a-rx->lo_a+rx->error_a);
-      soapy_protocol_set_rx_frequency(radio->receiver[0]);
-      soapy_protocol_set_automatic_gain(radio->receiver[0],radio->adc[0].agc);
-      for(int i=0;i<radio->discovered->info.soapy.rx_gains;i++) {
-        soapy_protocol_set_gain(&radio->adc[0]);
-      } 
-      soapy_protocol_start_receiver(rx);
-      if(r->can_transmit) {
-        if(r->transmitter!=NULL && r->transmitter->rx==rx) {
-          soapy_protocol_set_tx_antenna(r->transmitter,radio->dac[0].antenna);
-          soapy_protocol_set_tx_frequency(r->transmitter);
-        }
-      }
-      if(radio->can_transmit) {
-        soapy_protocol_set_tx_gain(&radio->dac[0]);
-      }
-      break;
-#endif
   }
 
-#ifdef SOAPYSDR
-  soapy_protocol_set_mic_sample_rate(r->sample_rate);
-#endif
   /*
   if(radio->local_microphone) {
     if(audio_open_input(r)!=0) {

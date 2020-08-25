@@ -37,22 +37,8 @@ enum {
    band12,
    band10,
    band6,
-#if defined(SOAPYSDR)
-   band70,
-   band144,
-   band220,
-   band430,
-   band902,
-   band1240,
-   band2300,
-   band3400,
-   bandAIR,
    bandGen,
    bandWWV,
-#else
-   bandGen,
-   bandWWV,
-#endif
    BANDS
 };
 

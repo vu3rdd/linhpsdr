@@ -448,44 +448,6 @@ static gboolean band_select_cb(GtkWidget *widget,gpointer data) {
           break;
       }
       break;
-#ifdef SOAPYSDR
-    case band70:
-      mode_a=USB;
-      frequency_a=70200000;
-      break;
-    case band144:
-      mode_a=USB;
-      frequency_a=144200000;
-      break;
-    case band220:
-      mode_a=USB;
-      frequency_a=220200000;
-      break;
-    case band430:
-      mode_a=USB;
-      frequency_a=432200000;
-      break;
-    case band902:
-      mode_a=USB;
-      frequency_a=902200000;
-      break;
-    case band1240:
-      mode_a=USB;
-      frequency_a=1240200000;
-      break;
-    case band2300:
-      mode_a=USB;
-      frequency_a=2300300000;
-      break;
-    case band3400:
-      mode_a=USB;
-      frequency_a=3400300000;
-      break;
-    case bandAIR:
-      mode_a=AM;
-      frequency_a=118800000;
-      break;
-#endif
     case bandGen:
       mode_a=AM;
       frequency_a=5975000LL;
@@ -1073,9 +1035,6 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
 
   switch(radio->discovered->protocol) {
     case PROTOCOL_2:
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-#endif
       {
       int x=0;
       int y=0;
@@ -1123,9 +1082,6 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
       g_signal_connect(sample_rate_384,"pressed",G_CALLBACK(sample_rate_cb),(gpointer)select);
 
       if((radio->discovered->protocol==PROTOCOL_2)
-#ifdef SOAPYSDR
-          || (radio->discovered->protocol==PROTOCOL_SOAPYSDR)
-#endif
       ) {
         GtkWidget *sample_rate_768=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(sample_rate_384),"768000");
         gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (sample_rate_768), rx->sample_rate==768000);
@@ -1172,9 +1128,6 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
     rx->local_audio_signal_id=g_signal_connect(rx->local_audio_b,"toggled",G_CALLBACK(local_audio_cb),rx);
 
     if(radio->discovered->device!=DEVICE_HERMES_LITE2
-#ifdef SOAPYSDR
-       && radio->discovered->device!=DEVICE_SOAPYSDR
-#endif
       ) {
 
       GtkWidget *remote_audio=gtk_check_button_new_with_label("Remote Audio");

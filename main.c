@@ -46,9 +46,6 @@
 #include "audio.h"
 #include "protocol1.h"
 #include "protocol2.h"
-#ifdef SOAPYSDR
-#include "soapy_protocol.h"
-#endif
 #include "property.h"
 #include "rigctl.h"
 #include "version.h"
@@ -95,11 +92,6 @@ static gboolean main_delete (GtkWidget *widget) {
       case PROTOCOL_2:
         protocol2_stop();
         break;
-#ifdef SOAPYSDR
-      case PROTOCOL_SOAPYSDR:
-        soapy_protocol_stop();
-        break;
-#endif
     }
     audio_close_input(radio);
     //audio_close_output(radio);
@@ -244,17 +236,6 @@ static int discover(void *data) {
             g_print("discovered: %ld device=%d\n",i,discovered[i].device);
 
             switch(d->device) {
-#ifdef SOAPYSDR
-            case DEVICE_SOAPYSDR:
-                if(strcmp(d->name,"rtlsdr")==0) {
-                    sprintf(mac,"%d",d->info.soapy.rtlsdr_count);
-                } else {
-                    strcpy(mac,"");
-                }
-                strcpy(ip,d->info.soapy.address);
-                strcpy(iface,"");
-                break;
-#endif
             default:
                 sprintf(mac,"%02X:%02X:%02X:%02X:%02X:%02X",
                         d->info.network.mac_address[0],
@@ -272,10 +253,6 @@ static int discover(void *data) {
                 strcpy(protocol,"1");
             } else if(d->protocol==PROTOCOL_2) {
                 strcpy(protocol,"2");
-#ifdef SOAPYSDR
-            } else if(d->protocol==PROTOCOL_SOAPYSDR) {
-                strcpy(protocol,"SoapySDR");
-#endif
             } else {
                 strcpy(protocol,"UNKNOWN");
             }
@@ -402,18 +379,6 @@ gboolean start_cb(GtkWidget *widget, gpointer data) {
     /* d is a global pointer to struct DISCOVERED (at the top) */
     if(d != NULL && d->status == STATE_AVAILABLE) {
         switch(d->device) {
-#ifdef SOAPYSDR
-        case DEVICE_SOAPYSDR:
-            if(strcmp(d->name,"rtlsdr")==0) {
-                g_snprintf(mac,sizeof(mac),"%d",d->info.soapy.rtlsdr_count);
-            } else {
-                strcpy(mac,"");
-            }
-            strcpy(ip,d->info.soapy.address);
-            strcpy(protocol,"Soapy");
-            strcpy(iface,"");
-            break;
-#endif
         default:
             g_snprintf(mac,sizeof(mac),"(%02X:%02X:%02X:%02X:%02X:%02X)",
                        d->info.network.mac_address[0],

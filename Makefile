@@ -26,21 +26,6 @@ AUDIO_LIBS=-lasound -lpulse-simple -lpulse -lpulse-mainloop-glib -lsoundio
 #	sudo apt-get install soapysdr-module-rtlsdr
 #	sudo apt-get install soapysdr-module-lms7
 #
-# SOAPYSDR_INCLUDE=SOAPYSDR
-
-ifeq ($(SOAPYSDR_INCLUDE),SOAPYSDR)
-SOAPYSDR_OPTIONS=-D SOAPYSDR
-SOAPYSDR_LIBS=-lSoapySDR
-SOAPYSDR_SOURCES= \
-soapy_discovery.c \
-soapy_protocol.c
-SOAPYSDR_HEADERS= \
-soapy_discovery.h \
-soapy_protocol.h
-SOAPYSDR_OBJS= \
-soapy_discovery.o \
-soapy_protocol.o
-endif
 
 # cwdaemon support. Allows linux based logging software to key an Hermes/HermesLite2
 # needs :
@@ -71,12 +56,12 @@ MIDI_LIBS= -lasound
 endif
 
 CFLAGS=	-Wall -g -Wno-deprecated-declarations -O3
-OPTIONS=  $(MIDI_OPTIONS) $(AUDIO_OPTIONS)  $(SOAPYSDR_OPTIONS) \
+OPTIONS=  $(MIDI_OPTIONS) $(AUDIO_OPTIONS)  \
          $(CWDAEMON_OPTIONS)  $(OPENGL_OPTIONS) \
          -D GIT_DATE='"$(GIT_DATE)"' -D GIT_VERSION='"$(GIT_VERSION)"'
 #OPTIONS=-g -Wno-deprecated-declarations $(AUDIO_OPTIONS) -D GIT_DATE='"$(GIT_DATE)"' -D GIT_VERSION='"$(GIT_VERSION)"' -O3 -D FT8_MARKER
 
-LIBS=-lrt -lm -lpthread -lwdsp $(GTKLIBS) $(AUDIO_LIBS) $(SOAPYSDR_LIBS) $(CWDAEMON_LIBS) $(OPENGL_LIBS) $(MIDI_LIBS)
+LIBS=-lrt -lm -lpthread -lwdsp $(GTKLIBS) $(AUDIO_LIBS) $(CWDAEMON_LIBS) $(OPENGL_LIBS) $(MIDI_LIBS)
 
 INCLUDES=$(GTKINCLUDES) $(OPGL_INCLUDES)
 
@@ -242,12 +227,11 @@ bpsk.o \
 subrx.o
 
 
-$(PROGRAM):  $(OBJS) $(SOAPYSDR_OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS)
-	$(LINK) -o $(PROGRAM) $(OBJS) $(SOAPYSDR_OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS)  $(LIBS)
+$(PROGRAM):  $(OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS)
+	$(LINK) -o $(PROGRAM) $(OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS)  $(LIBS)
 
 
-all: prebuild  $(PROGRAM) $(HEADERS) $(MIDI_HEADERS) $(SOURCES) $(SOAPYSDR_SOURCES) \
-							 $(CWDAEMON_SOURCES) $(MIDI_SOURCES)
+all: prebuild  $(PROGRAM) $(HEADERS) $(MIDI_HEADERS) $(SOURCES) $(CWDAEMON_SOURCES) $(MIDI_SOURCES)
 
 prebuild:
 	rm -f version.o

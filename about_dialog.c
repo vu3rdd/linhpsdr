@@ -27,10 +27,6 @@
 #include <arpa/inet.h>
 #include <wdsp.h>
 
-#ifdef SOAPYSDR
-#include <SoapySDR/Device.h>
-#endif
-
 #include "discovered.h"
 #include "bpsk.h"
 #include "receiver.h"
@@ -105,11 +101,6 @@ GtkWidget *create_about_dialog(RADIO *r) {
     case PROTOCOL_2:
       snprintf(protocol,sizeof(protocol),"Protocol: 2");
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      snprintf(protocol,sizeof(protocol),"Protocol: SOAPYSDR");
-      break;
-#endif
   }
   snprintf(text,sizeof(text),"Device: %s %s %s",r->discovered->name,protocol,r->discovered->software_version);
   label=gtk_label_new(text);

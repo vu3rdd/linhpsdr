@@ -45,9 +45,6 @@
 #include "mic_level.h"
 #include "property.h"
 #include "ext.h"
-#ifdef SOAPYSDR
-#include "soapy_protocol.h"
-#endif
 
 // Ring buffer for sending 126 tx iq samples in a packet
 #define QUEUE_ELEMENTS 10000
@@ -685,11 +682,6 @@ void full_tx_buffer_process(TRANSMITTER *tx) {
     case PROTOCOL_2:
       gain=8388607.0; // 24 bit
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      gain=32767.0;  // 16 bit
-      break;
-#endif
   }
   
   update_vox(radio);
@@ -760,11 +752,6 @@ void full_tx_buffer_process(TRANSMITTER *tx) {
         case PROTOCOL_2:
           protocol2_iq_samples(isample,qsample);
           break;
-#ifdef SOAPYSDR
-        case PROTOCOL_SOAPYSDR:
-          soapy_protocol_iq_samples((float)isample,(float)qsample);
-          break;
-#endif
 /*
 #ifdef RADIOBERRY
         case RADIOBERRY_PROTOCOL:
@@ -1031,15 +1018,6 @@ g_print("create_transmitter: channel=%d\n",channel);
       tx->buffer_size=1024;
       tx->output_samples=1024*(tx->iq_output_rate/tx->mic_sample_rate);
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      tx->mic_sample_rate=48000;
-      tx->mic_dsp_rate=96000;
-      tx->iq_output_rate=radio->sample_rate;
-      tx->buffer_size=1024;
-      tx->output_samples=1024*(tx->iq_output_rate/tx->mic_sample_rate);
-      break;
-#endif
   }
 
   tx->mic_samples=0;
@@ -1191,15 +1169,6 @@ g_print("update_timer: fps=%d\n",tx->fps);
       break;
     case PROTOCOL_2:
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      soapy_protocol_create_transmitter(tx);
-      soapy_protocol_set_tx_antenna(tx,radio->dac[0].antenna);
-      soapy_protocol_set_tx_gain(&radio->dac[0]);
-      soapy_protocol_set_tx_frequency(tx);
-      soapy_protocol_start_transmitter(tx);
-      break;
-#endif
   }
 
   /*

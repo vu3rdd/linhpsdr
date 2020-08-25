@@ -44,9 +44,6 @@ enum {
   ORION_2,
   HERMES_LITE,
   HERMES_LITE_2
-#ifdef SOAPYSDR
-  ,SOAPY_DEVICE
-#endif
 };
 
 enum {

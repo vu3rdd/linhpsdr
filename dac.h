@@ -23,9 +23,6 @@
 typedef struct _dac {
   gint id;
   gint antenna;
-#ifdef SOAPYSDR
-  gdouble gain;
-#endif
 } DAC;
 
 #endif

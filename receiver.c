@@ -673,13 +673,6 @@ g_print("receiver_change_sample_rate: from %d to %d radio=%d\n",rx->sample_rate,
   SetEXTNOBSamplerate (rx->channel, sample_rate);
 fprintf(stderr,"receiver_change_sample_rate: channel=%d rate=%d buffer_size=%d output_samples=%d\n",rx->channel, rx->sample_rate, rx->buffer_size, rx->output_samples);
 
-#ifdef SOAPYSDR
-  if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-    rx->resample_step=radio->sample_rate/rx->sample_rate;
-g_print("receiver_change_sample_rate: resample_step=%d\n",rx->resample_step);
-  }
-#endif
-
   SetChannelState(rx->channel,1,0);
   g_mutex_unlock(&rx->mutex);
   receiver_update_title(rx);
@@ -1051,14 +1044,6 @@ static gboolean update_timer_cb(void *data) {
     update_meter(rx);
   }
   update_radio_info(rx);
-
-#ifdef SOAPYSDR
-  if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-    if(radio->transmitter!=NULL && radio->discovered->info.soapy.has_temp) {
-      radio->transmitter->updated=FALSE;
-    }
-  }
-#endif
 
   if(radio->transmitter!=NULL && !radio->transmitter->updated) {
     update_tx_panadapter(radio);
@@ -1533,15 +1518,6 @@ g_print("create_receiver: channel=%d frequency_min=%ld frequency_max=%ld\n", cha
 
         }
         break;
-#ifdef SOAPYSDR
-      case PROTOCOL_SOAPYSDR:
-        if(radio->discovered->supported_receivers>1) {
-          rx->adc=2;
-        } else {
-          rx->adc=1;
-        }
-        break;
-#endif
     }
   }
    
@@ -1556,14 +1532,6 @@ g_print("create_receiver: channel=%d frequency_min=%ld frequency_max=%ld\n", cha
       rx->mode_a=USB;
       rx->bandstack=1;
       break;
-#ifdef SOAPYSDR
-    case PROTOCOL_SOAPYSDR:
-      rx->frequency_a=145000000;
-      rx->band_a=band144;
-      rx->mode_a=USB;
-      rx->bandstack=1;
-      break;
-#endif
   }
 
   rx->deviation=2500;
@@ -1619,16 +1587,8 @@ g_print("create_receiver: channel=%d frequency_min=%ld frequency_max=%ld\n", cha
   rx->pixel_samples=NULL;
   rx->waterfall_pixbuf=NULL;
   rx->iq_sequence=0;
-#ifdef SOAPYSDR
-  if(radio->discovered->device==DEVICE_SOAPYSDR) {
-    rx->buffer_size=1024; //2048;
-  } else {
-#endif
-    rx->buffer_size=1024;
-#ifdef SOAPYSDR
-  }
-#endif
-fprintf(stderr,"create_receiver: buffer_size=%d\n",rx->buffer_size);
+  rx->buffer_size=1024;
+  fprintf(stderr,"create_receiver: buffer_size=%d\n",rx->buffer_size);
   rx->iq_input_buffer=g_new0(gdouble,2*rx->buffer_size);
 
   rx->audio_buffer_size=480;
@@ -1642,16 +1602,8 @@ fprintf(stderr,"create_receiver: buffer_size=%d\n",rx->buffer_size);
   rx->fps=10;
   rx->display_average_time=170.0;
 
-#ifdef SOAPYSDR
-  if(radio->discovered->device==DEVICE_SOAPYSDR) {
-    rx->fft_size=2048;
-  } else {
-#endif
-    rx->fft_size=2048;
-#ifdef SOAPYSDR
-  }
-#endif
-fprintf(stderr,"create_receiver: fft_size=%d\n",rx->fft_size);
+  rx->fft_size=2048;
+  fprintf(stderr,"create_receiver: fft_size=%d\n",rx->fft_size);
   rx->low_latency=FALSE;
 
   rx->nb=FALSE;
@@ -1688,15 +1640,7 @@ fprintf(stderr,"create_receiver: fft_size=%d\n",rx->fft_size);
   rx->meter_surface=NULL;
   rx->radio_info_surface=NULL;
 
-#ifdef SOAPYSDR
-  if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-    rx->remote_audio=FALSE;
-  } else {
-#endif
-    rx->remote_audio=TRUE;        // on or off remote audio
-#ifdef SOAPYSDR
-  }
-#endif
+  rx->remote_audio=TRUE;        // on or off remote audio
   rx->local_audio=FALSE;
   rx->local_audio_buffer_size=2048;
   //rx->local_audio_buffer_size=rx->output_samples;
@@ -1772,12 +1716,6 @@ g_print("create_receiver: OpenChannel: channel=%d buffer_size=%d sample_rate=%d 
   create_nobEXT(rx->channel,1,0,rx->buffer_size,rx->sample_rate,0.0001,0.0001,0.0001,0.05,20);
   RXASetNC(rx->channel, rx->fft_size);
   RXASetMP(rx->channel, rx->low_latency);
-#ifdef SOAPYSDR
-  if(radio->discovered->protocol==PROTOCOL_SOAPYSDR) {
-    rx->resample_step=radio->sample_rate/rx->sample_rate;
-g_print("receiver_change_sample_rate: resample_step=%d\n",rx->resample_step);
-  }
-#endif
 
 
   frequency_changed(rx);

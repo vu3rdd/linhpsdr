@@ -33,24 +33,8 @@ AUDIOLIBS=-lsoundio
 #	sudo apt-get install soapysdr-module-rtlsdr
 #	sudo apt-get install soapysdr-module-lms7
 #
-SOAPYSDR_INCLUDE=SOAPYSDR
 
-ifeq ($(SOAPYSDR_INCLUDE),SOAPYSDR)
-SOAPYSDR_OPTIONS=-D SOAPYSDR
-SOAPYSDR_LIBS=-lSoapySDR
-SOAPYSDR_SOURCES= \
-soapy_discovery.c \
-soapy_protocol.c
-SOAPYSDR_HEADERS= \
-soapy_discovery.h \
-soapy_protocol.h
-SOAPYSDR_OBJS= \
-soapy_discovery.o \
-soapy_protocol.o
-endif
-
-
-OPTIONS=-Wno-deprecated-declarations -D SOUNDIO -D GIT_DATE='"$(GIT_DATE)"' -D GIT_VERSION='"$(GIT_VERSION)"' $(SOAPYSDR_OPTIONS) $(OPENGL_OPTIONS) -O3 -g
+OPTIONS=-Wno-deprecated-declarations -D SOUNDIO -D GIT_DATE='"$(GIT_DATE)"' -D GIT_VERSION='"$(GIT_VERSION)"' $(OPENGL_OPTIONS) -O3 -g
 
 LIBS=-lm -lpthread -lwdsp
 INCLUDES=$(GTKINCLUDES) $(PULSEINCLUDES) $(OPENGL_INCLUDES)
@@ -207,13 +191,13 @@ error_handler.o\
 radio_info.o\
 bpsk.o
 
-all: prebuild  $(PROGRAM) $(HEADERS) $(SOURCES) $(SOAPYSDR_SOURCES)
+all: prebuild  $(PROGRAM) $(HEADERS) $(SOURCES)
 
 prebuild:
 	rm -f version.o
 
-$(PROGRAM):  $(OBJS) $(SOAPYSDR_OBJS)
-	$(LINK) -o $(PROGRAM) $(OBJS) $(SOAPYSDR_OBJS) $(GTKLIBS) $(LIBS) $(AUDIOLIBS) $(SOAPYSDR_LIBS) $(OPENGL_LIBS)
+$(PROGRAM):  $(OBJS)
+	$(LINK) -o $(PROGRAM) $(OBJS) $(GTKLIBS) $(LIBS) $(AUDIOLIBS) $(OPENGL_LIBS)
 
 .c.o:
 	$(COMPILE) -c -o $@ $<

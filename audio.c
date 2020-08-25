@@ -38,10 +38,6 @@
 #include <alsa/asoundlib.h>
 #endif
 
-#ifdef SOAPYSDR
-#include <SoapySDR/Device.h>
-#endif
-
 #include "adc.h"
 #include "dac.h"
 #include "discovered.h"
@@ -53,9 +49,6 @@
 #include "main.h"
 #include "protocol1.h"
 #include "protocol2.h"
-#ifdef SOAPYSDR
-#include "soapy_protocol.h"
-#endif
 #include "audio.h"
 
 int n_input_devices;
@@ -974,11 +967,6 @@ static void *mic_read_thread(gpointer arg) {
           case PROTOCOL_2:
             protocol2_process_local_mic(r);
             break;
-#ifdef SOAPYSDR
-          case PROTOCOL_SOAPYSDR:
-            soapy_protocol_process_local_mic(r);
-            break;
-#endif
         }
       }
       break;
@@ -1004,11 +992,6 @@ static void *mic_read_thread(gpointer arg) {
               case PROTOCOL_2:
                 protocol2_process_local_mic(r);
                 break;
-#ifdef SOAPYSDR
-              case PROTOCOL_SOAPYSDR:
-                soapy_protocol_process_local_mic(r);
-                break;
-#endif
             }
           }
         }
@@ -1055,11 +1038,6 @@ fprintf(stderr,"mic_read_thread: ALSA: mic_buffer_size=%d\n",radio->local_microp
             case PROTOCOL_2:
               protocol2_process_local_mic(r);
               break;
-#ifdef SOAPYSDR
-            case PROTOCOL_SOAPYSDR:
-              soapy_protocol_process_local_mic(r);
-              break;
-#endif
           }
         }
       }

@@ -26,10 +26,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#ifdef SOAPYSDR
-#include <SoapySDR/Device.h>
-#endif
-
 #include "bpsk.h"
 #include "receiver.h"
 #include "transmitter.h"
