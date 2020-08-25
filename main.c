@@ -470,26 +470,27 @@ g_print("moving main_window to x=%d y=%d\n",x,y);
 }
 
 static void activate_hpsdr(GtkApplication *app, gpointer data) {
-  struct utsname unameData;
-  char title[64];
-  char png_path[128];
+    struct utsname unameData;
+    char title[64];
+    char png_path1[128];
+    char png_path2[128];
 
-  g_print("Build: %s %s\n",build_date,version);
-  g_print("GTK+ version %d.%d.%d\n", gtk_major_version, gtk_minor_version, gtk_micro_version);
-  uname(&unameData);
-  g_print("sysname: %s\n",unameData.sysname);
-  g_print("nodename: %s\n",unameData.nodename);
-  g_print("release: %s\n",unameData.release);
-  g_print("version: %s\n",unameData.version);
-  g_print("machine: %s\n",unameData.machine);
+    g_print("Build: %s %s\n",build_date,version);
+    g_print("GTK+ version %d.%d.%d\n", gtk_major_version, gtk_minor_version, gtk_micro_version);
+    uname(&unameData);
+    g_print("sysname: %s\n", unameData.sysname);
+    g_print("nodename: %s\n", unameData.nodename);
+    g_print("release: %s\n", unameData.release);
+    g_print("version: %s\n", unameData.version);
+    g_print("machine: %s\n", unameData.machine);
 
-  load_css();
+    load_css();
 
-  GdkScreen *screen=gdk_screen_get_default();
-  if(screen==NULL) {
-    g_print("HPSDR: no default screen!\n");
-    _exit(0);
-  }
+    GdkScreen *screen = gdk_screen_get_default();
+    if (screen == NULL) {
+        g_print("HPSDR: no default screen!\n");
+        _exit(0);
+    }
 
 #ifdef OPENGL
   GtkWidget *opengl_widget=gtk_gl_area_new();
