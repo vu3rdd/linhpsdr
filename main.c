@@ -388,85 +388,85 @@ gboolean retry_cb(GtkWidget *widget,gpointer data) {
 }
 
 gboolean start_cb(GtkWidget *widget,gpointer data) { 
-  char v[32];
-  char mac[32];
-  char ip[32];
-  char iface[64];
-  char protocol[32];
-  gchar title[128];
-  char *value;
-  gint x=-1;
-  gint y=-1;
+    char v[32];
+    char mac[32];
+    char ip[32];
+    char iface[64];
+    char protocol[32];
+    gchar title[128];
+    char *value;
+    gint x=-1;
+    gint y=-1;
 
-  if(d!=NULL && d->status==STATE_AVAILABLE) {
-    switch(d->device) {
+    if(d!=NULL && d->status==STATE_AVAILABLE) {
+        switch(d->device) {
 #ifdef SOAPYSDR
-      case DEVICE_SOAPYSDR:
-        if(strcmp(d->name,"rtlsdr")==0) {
-          g_snprintf(mac,sizeof(mac),"%d",d->info.soapy.rtlsdr_count);
-        } else {
-          strcpy(mac,"");
-        }
-        strcpy(ip,d->info.soapy.address);
-        strcpy(protocol,"Soapy");
-        strcpy(iface,"");
-        break;
+        case DEVICE_SOAPYSDR:
+            if(strcmp(d->name,"rtlsdr")==0) {
+                g_snprintf(mac,sizeof(mac),"%d",d->info.soapy.rtlsdr_count);
+            } else {
+                strcpy(mac,"");
+            }
+            strcpy(ip,d->info.soapy.address);
+            strcpy(protocol,"Soapy");
+            strcpy(iface,"");
+            break;
 #endif
-      default:
-        g_snprintf(mac,sizeof(mac),"(%02X:%02X:%02X:%02X:%02X:%02X)",
-          d->info.network.mac_address[0],
-          d->info.network.mac_address[1],
-          d->info.network.mac_address[2],
-          d->info.network.mac_address[3],
-          d->info.network.mac_address[4],
-          d->info.network.mac_address[5]);
-        strcpy(ip,inet_ntoa(d->info.network.address.sin_addr));
-        if(d->protocol==0) {
-          strcpy(protocol,"P1");
-        } else {
-          strcpy(protocol,"P2");
+        default:
+            g_snprintf(mac,sizeof(mac),"(%02X:%02X:%02X:%02X:%02X:%02X)",
+                       d->info.network.mac_address[0],
+                       d->info.network.mac_address[1],
+                       d->info.network.mac_address[2],
+                       d->info.network.mac_address[3],
+                       d->info.network.mac_address[4],
+                       d->info.network.mac_address[5]);
+            strcpy(ip,inet_ntoa(d->info.network.address.sin_addr));
+            if(d->protocol==0) {
+                strcpy(protocol,"P1");
+            } else {
+                strcpy(protocol,"P2");
+            }
+            sprintf(iface,"on %s",d->info.network.interface_name);
+            break;
         }
-        sprintf(iface,"on %s",d->info.network.interface_name);
-        break;
+        g_snprintf((gchar *)&title,sizeof(title),"LinHPSDR (%s): %s %s %s %s %s %s",
+                   version,
+                   d->name,
+                   protocol,
+                   d->software_version,
+                   ip,
+                   mac,
+                   iface);
+
+        g_print("starting %s\n",title);
+        gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_WATCH));
+        gtk_widget_set_name(main_window,"receiver-window");
+        gtk_window_set_title(GTK_WINDOW (main_window),title);
+        while(gtk_events_pending()) gtk_main_iteration();
+
+        radio=create_radio(d);
+        gtk_container_remove(GTK_CONTAINER(grid),view);
+        gtk_container_remove(GTK_CONTAINER(grid),start);
+        gtk_container_remove(GTK_CONTAINER(grid),retry);
+        gtk_grid_attach(GTK_GRID(grid), radio->visual, 1, 0, 4, 1);
+        gtk_widget_show_all(grid);
+
+        //launch_rigctl(radio);
+
+        value=getProperty("radio.x");
+        if(value!=NULL) x=atoi(value);
+        value=getProperty("radio.y");
+        if(value!=NULL) y=atoi(value);
+        g_print("x=%d y=%d\n",x,y);
+        if(x!=-1 && y!=-1) {
+            g_print("moving main_window to x=%d y=%d\n",x,y);
+            gtk_window_move(GTK_WINDOW(main_window),x,y);
+        }
+        gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_ARROW));
+
+        g_signal_connect(image_event_box,"button-press-event",G_CALLBACK(radio_button_press_event_cb),NULL);
     }
-    g_snprintf((gchar *)&title,sizeof(title),"LinHPSDR (%s): %s %s %s %s %s %s",
-      version,
-      d->name,
-      protocol,
-      d->software_version,
-      ip,
-      mac,
-      iface);
-
-    g_print("starting %s\n",title);
-    gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_WATCH));
-    gtk_widget_set_name(main_window,"receiver-window");
-    gtk_window_set_title(GTK_WINDOW (main_window),title);
-    while(gtk_events_pending()) gtk_main_iteration();
-
-    radio=create_radio(d);
-    gtk_container_remove(GTK_CONTAINER(grid),view);
-    gtk_container_remove(GTK_CONTAINER(grid),start);
-    gtk_container_remove(GTK_CONTAINER(grid),retry);
-    gtk_grid_attach(GTK_GRID(grid), radio->visual, 1, 0, 4, 1);
-    gtk_widget_show_all(grid);
-
-    //launch_rigctl(radio);
-
-    value=getProperty("radio.x");
-    if(value!=NULL) x=atoi(value);
-    value=getProperty("radio.y");
-    if(value!=NULL) y=atoi(value);
-g_print("x=%d y=%d\n",x,y);
-    if(x!=-1 && y!=-1) {
-g_print("moving main_window to x=%d y=%d\n",x,y);
-      gtk_window_move(GTK_WINDOW(main_window),x,y);
-    }
-    gdk_window_set_cursor(gtk_widget_get_window(main_window),gdk_cursor_new(GDK_ARROW));
-
-    g_signal_connect(image_event_box,"button-press-event",G_CALLBACK(radio_button_press_event_cb),NULL);
-  }
-  return TRUE;
+    return TRUE;
 }
 
 static void activate_hpsdr(GtkApplication *app, gpointer data) {
