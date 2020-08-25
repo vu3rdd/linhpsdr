@@ -548,9 +548,14 @@ static void activate_hpsdr(GtkApplication *app, gpointer data) {
                           gtk_widget_get_events(image_event_box) | GDK_BUTTON_PRESS_MASK);
 
     gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
 
-    gtk_container_add(GTK_CONTAINER (main_window), grid);
+    GtkWidget *frame = gtk_frame_new("LinHPSDR Device Discovery");
+    gtk_container_add(GTK_CONTAINER (main_window), frame);
+
+    gtk_container_add(GTK_CONTAINER (frame), grid);
     gtk_container_set_border_width(GTK_CONTAINER (main_window), 10);
+    gtk_container_set_border_width(GTK_CONTAINER (grid), 10);
 
     retry = gtk_button_new_with_label("Retry Discovery");
     g_signal_connect(retry,"clicked",G_CALLBACK(retry_cb),NULL);
