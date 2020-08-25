@@ -119,6 +119,7 @@ struct _DISCOVERED {
 
 typedef struct _DISCOVERED DISCOVERED;
 
+/* XXX: wtf? Globals again! */
 extern int devices;
 extern DISCOVERED discovered[MAX_DEVICES];
 
