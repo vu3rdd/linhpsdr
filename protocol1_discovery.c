@@ -147,6 +147,8 @@ static gpointer discover_receive_thread(gpointer data) {
 
     len=sizeof(addr);
     while(1) {
+        /* Metis replies with: <0xEFFE><Status>< Metis MAC
+           Address><Code * Version><Board_ID><49 bytes of 0x00> */
         bytes_read = recvfrom(discovery_socket,
                               buffer,
                               sizeof(buffer),
@@ -160,16 +162,19 @@ static gpointer discover_receive_thread(gpointer data) {
         }
 
         g_print("discovered: received %d bytes\n",bytes_read);
-        if ((buffer[0] & 0xFF) == 0xEF && (buffer[1] & 0xFF) == 0xFE) {
-            int status = buffer[2] & 0xFF;
+        if ((buffer[0] & 0xFF) == 0xEF &&
+            (buffer[1] & 0xFF) == 0xFE) {
+            int status = buffer[2] & 0xFF; /* 2 if metis is not
+                                            * sending, 3 if sending */
             if (status == 2 || status == 3) {
                 /* XXX: devices is declared in discovered.c and
                  * declared as an extern in discovered.h. Yuck! */
                 if(devices < MAX_DEVICES) {
                     discovered[devices].protocol = PROTOCOL_1;
-                    version=buffer[9]&0xFF;                    
+                    version = buffer[9] & 0xFF; /* code version */
                     sprintf(discovered[devices].software_version,"%d",version);
-                    switch(buffer[10]&0xFF) {
+
+                    switch(buffer[10] & 0xFF) { /* Board ID - 0x00 for metis */
                         case OLD_DEVICE_METIS:
                             discovered[devices].device=DEVICE_METIS;
                             strcpy(discovered[devices].name,"Metis");
@@ -208,15 +213,15 @@ static gpointer discover_receive_thread(gpointer data) {
                             break;
                         case OLD_DEVICE_HERMES_LITE:
                             discovered[devices].device=DEVICE_HERMES_LITE;
-			                      if (version < 42) {
-                              strcpy(discovered[devices].name,"Hermes Lite V1");
-                              discovered[devices].supported_receivers = 2;                                
-			                      } else {
-                              strcpy(discovered[devices].name,"Hermes Lite V2");
-			                        discovered[devices].device = DEVICE_HERMES_LITE2;
-                              // HL2 send max supported receveirs in discovery response.
-                              discovered[devices].supported_receivers=buffer[0x13];                    
-			                      }                            
+                            if (version < 42) {
+                                strcpy(discovered[devices].name,"Hermes Lite V1");
+                                discovered[devices].supported_receivers = 2;
+                            } else {
+                                strcpy(discovered[devices].name,"Hermes Lite V2");
+                                discovered[devices].device = DEVICE_HERMES_LITE2;
+                                // HL2 send max supported receveirs in discovery response.
+                                discovered[devices].supported_receivers=buffer[0x13];
+                            }
                             discovered[devices].supported_transmitters=1;
                             discovered[devices].adcs=1;
                             discovered[devices].frequency_min=0.0;
@@ -242,16 +247,17 @@ static gpointer discover_receive_thread(gpointer data) {
                             break;
                     }
 
+                    /* copy the mac address */
                     for(size_t i = 0; i < 6; i++) {
                         discovered[devices].info.network.mac_address[i]=buffer[i+3];
                     }
 
-                    discovered[devices].status=status;
+                    discovered[devices].status = status;
                     memcpy((void*)&discovered[devices].info.network.address,
                            (void*)&addr,
                            sizeof(addr));
 
-                    discovered[devices].info.network.address_length=sizeof(addr);
+                    discovered[devices].info.network.address_length = sizeof(addr);
                     memcpy((void*)&discovered[devices].info.network.interface_address,
                            (void*)&interface_addr,
                            sizeof(interface_addr));
@@ -259,8 +265,8 @@ static gpointer discover_receive_thread(gpointer data) {
                            (void*)&interface_netmask,
                            sizeof(interface_netmask));
 
-                    discovered[devices].info.network.interface_length=sizeof(interface_addr);
-                    strcpy(discovered[devices].info.network.interface_name,interface_name);
+                    discovered[devices].info.network.interface_length = sizeof(interface_addr);
+                    strcpy(discovered[devices].info.network.interface_name, interface_name);
 
                     g_print("discovery: found device=%d software_version=%s status=%d address=%s (%02X:%02X:%02X:%02X:%02X:%02X) on %s\n",
                             discovered[devices].device,
@@ -278,7 +284,6 @@ static gpointer discover_receive_thread(gpointer data) {
                 }
             }
         }
-
     }
     g_print("discovery: exiting discover_receive_thread\n");
     //g_thread_exit(NULL);
