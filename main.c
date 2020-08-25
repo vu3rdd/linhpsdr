@@ -493,13 +493,13 @@ static void activate_hpsdr(GtkApplication *app, gpointer data) {
     }
 
 #ifdef OPENGL
-  GtkWidget *opengl_widget=gtk_gl_area_new();
-  opengl=opengl_widget!=NULL;
-  if(opengl_widget!=NULL) {
-    gtk_widget_destroy(opengl_widget);
-  }
+    GtkWidget *opengl_widget = gtk_gl_area_new();
+    opengl = opengl_widget != NULL;
+    if(opengl_widget != NULL) {
+        gtk_widget_destroy(opengl_widget);
+    }
 #endif
-  g_print("opengl: %d\n",opengl);
+    g_print("opengl: %d\n",opengl);
 
 #ifdef __APPLE__
   sprintf(png_path,"/usr/local/share/linhpsdr/hpsdr.png");
