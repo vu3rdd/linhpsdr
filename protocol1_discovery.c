@@ -54,7 +54,7 @@ static void discover(struct ifaddrs* iface) {
     g_print("discover: looking for HPSDR devices on %s\n", interface_name);
 
     // send a broadcast to locate hpsdr boards on the network
-    discovery_socket=socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
+    discovery_socket = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if(discovery_socket<0) {
         perror("discover: create socket failed for discovery_socket\n");
         exit(-1);
@@ -73,6 +73,7 @@ static void discover(struct ifaddrs* iface) {
     interface_addr.sin_addr.s_addr = sa->sin_addr.s_addr;
     //interface_addr.sin_port = htons(DISCOVERY_PORT*2);
     interface_addr.sin_port = htons(0); // system assigned port
+
     if(bind(discovery_socket,(struct sockaddr*)&interface_addr,sizeof(interface_addr))<0) {
         perror("discover: bind socket failed for discovery_socket\n");
         exit(-1);
@@ -97,25 +98,22 @@ static void discover(struct ifaddrs* iface) {
 
     // start a receive thread to collect discovery response packets
     discover_thread_id = g_thread_new( "protocol1 discover receive", discover_receive_thread, NULL);
-    if( ! discover_thread_id )
-    {
+    if(!discover_thread_id ) {
         g_print("g_thread_new failed on discover_receive_thread\n");
         exit( -1 );
     }
-
-
 
     // send discovery packet
     unsigned char buffer[63];
     buffer[0]=0xEF;
     buffer[1]=0xFE;
     buffer[2]=0x02;
-    int i;
-    for(i=3;i<63;i++) {
+
+    for(size_t i = 3; i < 63; i++) {
         buffer[i]=0x00;
     }
 
-    if(sendto(discovery_socket,buffer,63,0,(struct sockaddr*)&to_addr,sizeof(to_addr))<0) {
+    if(sendto(discovery_socket,buffer,63,0,(struct sockaddr*)&to_addr,sizeof(to_addr)) < 0) {
         perror("discover: sendto socket failed for discovery_socket\n");
         if(errno!=EHOSTUNREACH && errno!=EADDRNOTAVAIL) {
             exit(-1);
@@ -128,7 +126,6 @@ static void discover(struct ifaddrs* iface) {
     close(discovery_socket);
 
     g_print("discover: exiting discover for %s\n",iface->ifa_name);
-
 }
 
 //static void *discover_receive_thread(void* arg) {
@@ -138,10 +135,9 @@ static gpointer discover_receive_thread(gpointer data) {
     unsigned char buffer[2048];
     int bytes_read;
     struct timeval tv;
-    int i;
     int version;
 
-g_print("discover_receive_thread\n");
+    g_print("discover_receive_thread\n");
 
     tv.tv_sec = 2;
     tv.tv_usec = 0;
@@ -151,18 +147,26 @@ g_print("discover_receive_thread\n");
 
     len=sizeof(addr);
     while(1) {
-        bytes_read=recvfrom(discovery_socket,buffer,sizeof(buffer),0,(struct sockaddr*)&addr,&len);
-        if(bytes_read<0) {
+        bytes_read = recvfrom(discovery_socket,
+                              buffer,
+                              sizeof(buffer),
+                              0,
+                              (struct sockaddr*)&addr,
+                              &len);
+        if(bytes_read < 0) {
             g_print("discovery: bytes read %d\n", bytes_read);
             perror("discovery: recvfrom socket failed for discover_receive_thread");
             break;
         }
+
         g_print("discovered: received %d bytes\n",bytes_read);
         if ((buffer[0] & 0xFF) == 0xEF && (buffer[1] & 0xFF) == 0xFE) {
             int status = buffer[2] & 0xFF;
             if (status == 2 || status == 3) {
-                if(devices<MAX_DEVICES) {
-                    discovered[devices].protocol=PROTOCOL_1;
+                /* XXX: devices is declared in discovered.c and
+                 * declared as an extern in discovered.h. Yuck! */
+                if(devices < MAX_DEVICES) {
+                    discovered[devices].protocol = PROTOCOL_1;
                     version=buffer[9]&0xFF;                    
                     sprintf(discovered[devices].software_version,"%d",version);
                     switch(buffer[10]&0xFF) {
@@ -238,16 +242,26 @@ g_print("discover_receive_thread\n");
                             break;
                     }
 
-                    for(i=0;i<6;i++) {
+                    for(size_t i = 0; i < 6; i++) {
                         discovered[devices].info.network.mac_address[i]=buffer[i+3];
                     }
+
                     discovered[devices].status=status;
-                    memcpy((void*)&discovered[devices].info.network.address,(void*)&addr,sizeof(addr));
+                    memcpy((void*)&discovered[devices].info.network.address,
+                           (void*)&addr,
+                           sizeof(addr));
+
                     discovered[devices].info.network.address_length=sizeof(addr);
-                    memcpy((void*)&discovered[devices].info.network.interface_address,(void*)&interface_addr,sizeof(interface_addr));
-                    memcpy((void*)&discovered[devices].info.network.interface_netmask,(void*)&interface_netmask,sizeof(interface_netmask));
+                    memcpy((void*)&discovered[devices].info.network.interface_address,
+                           (void*)&interface_addr,
+                           sizeof(interface_addr));
+                    memcpy((void*)&discovered[devices].info.network.interface_netmask,
+                           (void*)&interface_netmask,
+                           sizeof(interface_netmask));
+
                     discovered[devices].info.network.interface_length=sizeof(interface_addr);
                     strcpy(discovered[devices].info.network.interface_name,interface_name);
+
                     g_print("discovery: found device=%d software_version=%s status=%d address=%s (%02X:%02X:%02X:%02X:%02X:%02X) on %s\n",
                             discovered[devices].device,
                             discovered[devices].software_version,
@@ -283,8 +297,8 @@ void protocol1_discovery() {
         if (ifa->ifa_addr &&
             (ifa->ifa_addr->sa_family == AF_INET
              || ifa->ifa_addr->sa_family==AF_LOCAL)) {
-            if((ifa->ifa_flags&IFF_UP)==IFF_UP
-               && (ifa->ifa_flags&IFF_RUNNING)==IFF_RUNNING
+            if((ifa->ifa_flags & IFF_UP)==IFF_UP
+               && (ifa->ifa_flags & IFF_RUNNING) == IFF_RUNNING
                /*&& (ifa->ifa_flags&IFF_LOOPBACK)!=IFF_LOOPBACK*/) {
                 discover(ifa);
             }
