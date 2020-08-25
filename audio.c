@@ -73,7 +73,6 @@ static snd_pcm_format_t formats[3]={
 static GThread *mic_read_thread_id;
 static void *mic_read_thread(void *arg);
 
-
 struct SoundIo *soundio;
 
 #ifndef __APPLE__
@@ -941,113 +940,117 @@ g_print("audio delay=%ld trim=%ld audio_buffer_size=%d\n",delay,trim,rx->local_a
   return result;
 }
 
-static void *mic_read_thread(gpointer arg) {
-  RADIO *r=(RADIO *)arg;
-  int rc;
-  int err;
-  g_print("mic_read_thread: ENTRY\n");
-  switch(radio->which_audio) {
+static void *mic_read_thread(gpointer arg)
+{
+    RADIO *r = (RADIO *)arg;
+    int rc;
+    int err;
+
+    g_print("mic_read_thread: ENTRY\n");
+    switch(radio->which_audio) {
     case USE_SOUNDIO:
-      while(running) {
-        g_mutex_lock (&r->ring_buffer_mutex);
-        while(soundio_ring_buffer_fill_count(r->ring_buffer)==0)
-          g_cond_wait (&r->ring_buffer_cond, &r->ring_buffer_mutex);
-        char *read_ptr = soundio_ring_buffer_read_ptr(r->ring_buffer);
-        int fill_bytes = soundio_ring_buffer_fill_count(r->ring_buffer);
-        if(fill_bytes>(r->local_microphone_buffer_size*sizeof(float))) {
-          fill_bytes=r->local_microphone_buffer_size*sizeof(float);
-        }
-        memcpy(r->local_microphone_buffer,read_ptr,fill_bytes);
-        soundio_ring_buffer_advance_read_ptr(r->ring_buffer, fill_bytes);
-        g_mutex_unlock (&r->ring_buffer_mutex);
-        switch(r->discovered->protocol) {
-          case PROTOCOL_1:
-            protocol1_process_local_mic(r);
-            break;
-          case PROTOCOL_2:
-            protocol2_process_local_mic(r);
-            break;
-        }
-      }
-      break;
-#ifndef __APPLE__
-    case USE_PULSEAUDIO:
-      while(running) {
-        g_mutex_lock(&r->local_microphone_mutex);
-        if(r->local_microphone_buffer==NULL) {
-          running=0;
-        } else {
-          rc=pa_simple_read(r->microphone_stream,
-      		r->local_microphone_buffer,
-      		r->local_microphone_buffer_size*sizeof(float),
-      		&err); 
-          if(rc<0) {
-            running=0;
-            g_print("mic_read_thread: returned %d error=%d (%s)\n",rc,err,pa_strerror(err));
-          } else {
+        while(running) {
+            g_mutex_lock (&r->ring_buffer_mutex);
+
+            while(soundio_ring_buffer_fill_count(r->ring_buffer) == 0)
+                g_cond_wait(&r->ring_buffer_cond, &r->ring_buffer_mutex);
+
+            char *read_ptr = soundio_ring_buffer_read_ptr(r->ring_buffer);
+
+            int fill_bytes = soundio_ring_buffer_fill_count(r->ring_buffer);
+            if(fill_bytes > (r->local_microphone_buffer_size * sizeof(float))) {
+                fill_bytes = r->local_microphone_buffer_size * sizeof(float);
+            }
+
+            memcpy(r->local_microphone_buffer, read_ptr, fill_bytes);
+            soundio_ring_buffer_advance_read_ptr(r->ring_buffer, fill_bytes);
+            g_mutex_unlock (&r->ring_buffer_mutex);
+
             switch(r->discovered->protocol) {
-              case PROTOCOL_1:
+            case PROTOCOL_1:
                 protocol1_process_local_mic(r);
                 break;
-              case PROTOCOL_2:
+            case PROTOCOL_2:
                 protocol2_process_local_mic(r);
                 break;
             }
-          }
         }
-        g_mutex_unlock(&r->local_microphone_mutex);
-      }
-      break;
-
-    case USE_ALSA:
-      {
-      int rc;
-      if ((rc = snd_pcm_start (r->record_handle)) < 0) {
-    g_print("mic_read_thread: ALSA: cannot start audio interface for use (%s)\n",
-            snd_strerror (rc));
-
-        return NULL;
-      }
-fprintf(stderr,"mic_read_thread: ALSA: mic_buffer_size=%d\n",radio->local_microphone_buffer_size);
-      running=TRUE;
-      while(running) {
-        if ((rc = snd_pcm_readi (r->record_handle, r->local_microphone_buffer, r->local_microphone_buffer_size)) != r->local_microphone_buffer_size) {
-          if(running) {
-            if(rc<0) {
-              if(rc==-EPIPE) {
-                //g_print("mic_read_thread: -EPIPE: snd_pcm_prepare\n");
-                if ((rc = snd_pcm_prepare (r->record_handle)) < 0) {
-                    g_print("mic_read_thread: ALSA: cannot prepare audio interface for use %d (%s)\n", rc, snd_strerror (rc));
-                    return rc;
-                }
-              } else {
-                fprintf (stderr, "mic_read_thread: ALSA: read from audio interface failed (%s)\n",
-                      snd_strerror (rc));
-                running=FALSE;
-              }
+        break;
+#ifndef __APPLE__
+    case USE_PULSEAUDIO:
+        while(running) {
+            g_mutex_lock(&r->local_microphone_mutex);
+            if(r->local_microphone_buffer==NULL) {
+                running=0;
             } else {
-              fprintf(stderr,"mic_read_thread: ALSA: read %d\n",rc);
+                rc=pa_simple_read(r->microphone_stream,
+                                  r->local_microphone_buffer,
+                                  r->local_microphone_buffer_size*sizeof(float),
+                                  &err);
+                if(rc < 0) {
+                    running = 0;
+                    g_print("mic_read_thread: returned %d error=%d (%s)\n",rc,err,pa_strerror(err));
+                } else {
+                    switch(r->discovered->protocol) {
+                    case PROTOCOL_1:
+                        protocol1_process_local_mic(r);
+                        break;
+                    case PROTOCOL_2:
+                        protocol2_process_local_mic(r);
+                        break;
+                    }
+                }
             }
-          }
-        } else {
-          // process the mic input
-          switch(r->discovered->protocol) {
-            case PROTOCOL_1:        
-              protocol1_process_local_mic(r);
-              break;
-            case PROTOCOL_2:
-              protocol2_process_local_mic(r);
-              break;
-          }
+            g_mutex_unlock(&r->local_microphone_mutex);
         }
-      }
-
-      }
-      break;
+        break;
+    case USE_ALSA:
+    {
+        int rc;
+        if ((rc = snd_pcm_start (r->record_handle)) < 0) {
+            g_print("mic_read_thread: ALSA: cannot start audio interface for use (%s)\n",
+                    snd_strerror (rc));
+            return NULL;
+        }
+        fprintf(stderr,"mic_read_thread: ALSA: mic_buffer_size=%d\n",radio->local_microphone_buffer_size);
+        running = TRUE;
+        while(running) {
+            if ((rc = snd_pcm_readi (r->record_handle, r->local_microphone_buffer, r->local_microphone_buffer_size)) != r->local_microphone_buffer_size) {
+                if(running) {
+                    if(rc < 0) {
+                        if(rc == -EPIPE) {
+                            //g_print("mic_read_thread: -EPIPE: snd_pcm_prepare\n");
+                            if ((rc = snd_pcm_prepare (r->record_handle)) < 0) {
+                                g_print("mic_read_thread: ALSA: cannot prepare audio interface for use %d (%s)\n", rc, snd_strerror (rc));
+                                return NULL;
+                            }
+                        } else {
+                            fprintf (stderr, "mic_read_thread: ALSA: read from audio interface failed (%s)\n",
+                                     snd_strerror (rc));
+                            running = FALSE;
+                        }
+                    } else {
+                        fprintf(stderr,"mic_read_thread: ALSA: read %d\n",rc);
+                    }
+                }
+            } else {
+                // process the mic input
+                switch(r->discovered->protocol) {
+                case PROTOCOL_1:    
+                    protocol1_process_local_mic(r);
+                    break;
+                case PROTOCOL_2:
+                    protocol2_process_local_mic(r);
+                    break;
+                }
+            }
+        }
+    }
+    break;
 #endif
   }
-g_print("mic_read_thread: EXIT\n");
-  return NULL;
+    g_print("mic_read_thread: EXIT\n");
+    return NULL;
 }
 
 void audio_get_cards() {
@@ -1132,77 +1135,76 @@ g_print("audio: state_cb: PA_CONTEXT_READY\n");
 #endif
 
 void create_audio(int backend_index,const char *backend) {
-  int rc;
+    int rc;
 
-  n_output_devices=0;
-  n_input_devices=0;
+    n_output_devices=0;
+    n_input_devices=0;
 
-  switch(radio->which_audio) {
+    switch(radio->which_audio) {
     case USE_SOUNDIO:
-g_print("audio: create_audio: USE_SOUNDIO: %d %s\n",soundio_get_backend(soundio,backend_index),backend);
-      soundio=soundio_create();
-      if(!soundio) {
-        g_print("create_audio: soundio_create failed\n");
-        return;
-      }
-      rc=soundio_connect_backend(soundio,soundio_get_backend(soundio,backend_index));
-      if(rc) {
-        g_print("create_audio: soundio_connect_backend: %s\n",soundio_strerror(rc));
-        return;
-      }
-
-      soundio_flush_events(soundio);
-
-      int output_count=soundio_output_device_count(soundio);
-      for(int i=0;i<output_count;i++) {
-        if(n_output_devices<MAX_AUDIO_DEVICES) {
-          struct SoundIoDevice *device=soundio_get_output_device(soundio,i);
-
-          // ignore devices that do not support the sample rate or format
-          if(!soundio_device_supports_sample_rate(device, sample_rate) ) {
-            continue;
-          }
-          if(!soundio_device_supports_format(device, SoundIoFormatFloat32NE) ) {
-            continue;
-          }
-
-          output_devices[n_output_devices].name=g_new0(char,strlen(device->name)+1);
-          strncpy(output_devices[n_output_devices].name,device->name,strlen(device->name));
-          output_devices[n_output_devices].description=g_new0(char,strlen(device->name)+1);
-          strncpy(output_devices[n_output_devices].description,device->name,strlen(device->name));
-          output_devices[n_output_devices].index=i;
-          soundio_device_unref(device);
-          n_output_devices++;
+        g_print("audio: create_audio: USE_SOUNDIO: %d %s\n",soundio_get_backend(soundio,backend_index),backend);
+        soundio = soundio_create();
+        if(!soundio) {
+            g_print("create_audio: soundio_create failed\n");
+            return;
         }
-      }
-      int input_count=soundio_input_device_count(soundio);
-      for(int i=0;i<input_count;i++) {
-        if(n_input_devices<MAX_AUDIO_DEVICES) {
-          struct SoundIoDevice *device=soundio_get_input_device(soundio,i);
-          input_devices[n_input_devices].name=g_new0(char,strlen(device->name)+1);
-          strncpy(input_devices[n_input_devices].name,device->name,strlen(device->name));
-          input_devices[n_input_devices].description=g_new0(char,strlen(device->name)+1);
-          strncpy(input_devices[n_input_devices].description,device->name,strlen(device->name));
-          input_devices[n_input_devices].index=i;
-          soundio_device_unref(device);
-          n_input_devices++;
+        rc=soundio_connect_backend(soundio,soundio_get_backend(soundio,backend_index));
+        if(rc) {
+            g_print("create_audio: soundio_connect_backend: %s\n",soundio_strerror(rc));
+            return;
         }
-      }
-      break;
-  
+
+        soundio_flush_events(soundio);
+
+        int output_count=soundio_output_device_count(soundio);
+        for(size_t i = 0; i < output_count; i++) {
+            if(n_output_devices<MAX_AUDIO_DEVICES) {
+                struct SoundIoDevice *device=soundio_get_output_device(soundio,i);
+
+                // ignore devices that do not support the sample rate or format
+                if(!soundio_device_supports_sample_rate(device, sample_rate) ) {
+                    continue;
+                }
+                if(!soundio_device_supports_format(device, SoundIoFormatFloat32NE) ) {
+                    continue;
+                }
+
+                output_devices[n_output_devices].name=g_new0(char,strlen(device->name)+1);
+                strncpy(output_devices[n_output_devices].name,device->name,strlen(device->name));
+                output_devices[n_output_devices].description=g_new0(char,strlen(device->name)+1);
+                strncpy(output_devices[n_output_devices].description,device->name,strlen(device->name));
+                output_devices[n_output_devices].index=i;
+                soundio_device_unref(device);
+                n_output_devices++;
+            }
+        }
+        int input_count = soundio_input_device_count(soundio);
+        for(size_t i = 0; i < input_count; i++) {
+            if(n_input_devices < MAX_AUDIO_DEVICES) {
+                struct SoundIoDevice *device=soundio_get_input_device(soundio,i);
+                input_devices[n_input_devices].name=g_new0(char,strlen(device->name)+1);
+                strncpy(input_devices[n_input_devices].name,device->name,strlen(device->name));
+                input_devices[n_input_devices].description=g_new0(char,strlen(device->name)+1);
+                strncpy(input_devices[n_input_devices].description,device->name,strlen(device->name));
+                input_devices[n_input_devices].index=i;
+                soundio_device_unref(device);
+                n_input_devices++;
+            }
+        }
+        break;
+
 #ifndef __APPLE__
     case USE_PULSEAUDIO:
-g_print("audio: create_audio: USE_PULSEAUDIO\n");
-      main_loop=pa_glib_mainloop_new(NULL);
-      main_loop_api=pa_glib_mainloop_get_api(main_loop);
-      pa_ctx=pa_context_new(main_loop_api,"linhpsdr");
-      pa_context_connect(pa_ctx,NULL,0,NULL);
-      pa_context_set_state_callback(pa_ctx, state_cb, &ready);
-      break;
+        g_print("audio: create_audio: USE_PULSEAUDIO\n");
+        main_loop = pa_glib_mainloop_new(NULL);
+        main_loop_api = pa_glib_mainloop_get_api(main_loop);
+        pa_ctx = pa_context_new(main_loop_api,"linhpsdr");
+        pa_context_connect(pa_ctx,NULL,0,NULL);
+        pa_context_set_state_callback(pa_ctx, state_cb, &ready);
+        break;
 
     case USE_ALSA:
-      {
-
+    {
         snd_ctl_card_info_t *info;
         snd_pcm_info_t *pcminfo;
         snd_ctl_card_info_alloca(&info);
@@ -1217,60 +1219,60 @@ g_print("audio: create_audio: USE_PULSEAUDIO\n");
         snd_ctl_card_info_alloca(&info);
         snd_pcm_info_alloca(&pcminfo);
         while (snd_card_next(&card) >= 0 && card >= 0) {
-          int err = 0;
-          snd_ctl_t *handle;
-          char name[20];
-          snprintf(name, sizeof(name), "hw:%d", card);
-          if ((err = snd_ctl_open(&handle, name, 0)) < 0) {
-            continue;
-          }
+            int err = 0;
+            snd_ctl_t *handle;
+            char name[20];
+            snprintf(name, sizeof(name), "hw:%d", card);
+            if ((err = snd_ctl_open(&handle, name, 0)) < 0) {
+                continue;
+            }
 
-          if ((err = snd_ctl_card_info(handle, info)) < 0) {
+            if ((err = snd_ctl_card_info(handle, info)) < 0) {
+                snd_ctl_close(handle);
+                continue;
+            }
+
+            int dev = -1;
+
+            while (snd_ctl_pcm_next_device(handle, &dev) >= 0 && dev >= 0) {
+                snd_pcm_info_set_device(pcminfo, dev);
+                snd_pcm_info_set_subdevice(pcminfo, 0);
+
+                // input devices
+                snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_CAPTURE);
+                if ((err = snd_ctl_pcm_info(handle, pcminfo)) == 0) {
+                    device_id=g_new(char,128);
+                    snprintf(device_id, 128, "plughw:%d,%d %s", card, dev, snd_ctl_card_info_get_name(info));
+                    if(n_input_devices<MAX_AUDIO_DEVICES) {
+                        input_devices[n_input_devices].name=g_new0(char,strlen(device_id)+1);
+                        strcpy(input_devices[n_input_devices].name,device_id);
+                        input_devices[n_input_devices].description=g_new0(char,strlen(device_id)+1);
+                        strcpy(input_devices[n_input_devices].description,device_id);
+                        input_devices[n_input_devices].index=0; // not used
+                        n_input_devices++;
+                        g_print("input_device: %s\n",device_id);
+                    }
+                    g_free(device_id);
+                }
+
+                // ouput devices
+                snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_PLAYBACK);
+                if ((err = snd_ctl_pcm_info(handle, pcminfo)) == 0) {
+                    device_id = g_new(char,128);
+                    snprintf(device_id, 128, "plughw:%d,%d %s", card, dev, snd_ctl_card_info_get_name(info));
+                    if(n_output_devices < MAX_AUDIO_DEVICES) {
+                        output_devices[n_output_devices].name=g_new0(char,strlen(device_id)+1);
+                        strcpy(output_devices[n_output_devices].name,device_id);
+                        output_devices[n_output_devices].description=g_new0(char,strlen(device_id)+1);
+                        strcpy(output_devices[n_output_devices].description,device_id);
+                        input_devices[n_output_devices].index=0; // not used
+                        n_output_devices++;
+                        g_print("output_device: %s\n",device_id);
+                    }
+                    g_free(device_id);
+                }
+            }
             snd_ctl_close(handle);
-            continue;
-          }
-
-          int dev = -1;
-
-          while (snd_ctl_pcm_next_device(handle, &dev) >= 0 && dev >= 0) {
-            snd_pcm_info_set_device(pcminfo, dev);
-            snd_pcm_info_set_subdevice(pcminfo, 0);
-
-            // input devices
-            snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_CAPTURE);
-            if ((err = snd_ctl_pcm_info(handle, pcminfo)) == 0) {
-              device_id=g_new(char,128);
-              snprintf(device_id, 128, "plughw:%d,%d %s", card, dev, snd_ctl_card_info_get_name(info));
-              if(n_input_devices<MAX_AUDIO_DEVICES) {
-                input_devices[n_input_devices].name=g_new0(char,strlen(device_id)+1);
-                strcpy(input_devices[n_input_devices].name,device_id);
-                input_devices[n_input_devices].description=g_new0(char,strlen(device_id)+1);
-                strcpy(input_devices[n_input_devices].description,device_id);
-                input_devices[n_input_devices].index=0; // not used
-                n_input_devices++;
-g_print("input_device: %s\n",device_id);
-              }
-	      g_free(device_id);
-            }
-
-            // ouput devices
-            snd_pcm_info_set_stream(pcminfo, SND_PCM_STREAM_PLAYBACK);
-            if ((err = snd_ctl_pcm_info(handle, pcminfo)) == 0) {
-              device_id=g_new(char,128);
-              snprintf(device_id, 128, "plughw:%d,%d %s", card, dev, snd_ctl_card_info_get_name(info));
-              if(n_output_devices<MAX_AUDIO_DEVICES) {
-                output_devices[n_output_devices].name=g_new0(char,strlen(device_id)+1);
-                strcpy(output_devices[n_output_devices].name,device_id);
-                output_devices[n_output_devices].description=g_new0(char,strlen(device_id)+1);
-                strcpy(output_devices[n_output_devices].description,device_id);
-                input_devices[n_output_devices].index=0; // not used
-                n_output_devices++;
-g_print("output_device: %s\n",device_id);
-              }
-	    g_free(device_id);
-            }
-          }
-          snd_ctl_close(handle);
         }
 	
         // look for dmix
@@ -1278,47 +1280,45 @@ g_print("output_device: %s\n",device_id);
         char *name, *descr, *io;
 
         if (snd_device_name_hint(-1, "pcm", &hints) < 0)
-          return;
+            return;
         n = hints;
         while (*n != NULL) {
-          name = snd_device_name_get_hint(*n, "NAME");
-          descr = snd_device_name_get_hint(*n, "DESC");
-          io = snd_device_name_get_hint(*n, "IOID");
+            name = snd_device_name_get_hint(*n, "NAME");
+            descr = snd_device_name_get_hint(*n, "DESC");
+            io = snd_device_name_get_hint(*n, "IOID");
 
-          if(strncmp("dmix:", name, 5)==0) {
-            if(n_output_devices<MAX_AUDIO_DEVICES) {
-              output_devices[n_output_devices].name=g_new0(char,strlen(name)+1);
-              strcpy(output_devices[n_output_devices].name,name);
-              output_devices[n_output_devices].description=g_new0(char,strlen(descr)+1);
-	      i=0;
-              while(i<strlen(descr) && descr[i]!='\n') {
-		output_devices[n_output_devices].description[i]=descr[i];
-	        i++;
-	      }
-          output_devices[n_output_devices].description[i]='\0';
-              input_devices[n_output_devices].index=0;  // not used
-              n_output_devices++;
-g_print("output_device: name=%s descr=%s\n",name,descr);
+            if(strncmp("dmix:", name, 5)==0) {
+                if(n_output_devices<MAX_AUDIO_DEVICES) {
+                    output_devices[n_output_devices].name=g_new0(char,strlen(name)+1);
+                    strcpy(output_devices[n_output_devices].name,name);
+                    output_devices[n_output_devices].description=g_new0(char,strlen(descr)+1);
+                    i = 0;
+                    while(i < strlen(descr) && descr[i]!='\n') {
+                        output_devices[n_output_devices].description[i]=descr[i];
+                        i++;
+                    }
+                    output_devices[n_output_devices].description[i]='\0';
+                    input_devices[n_output_devices].index=0;  // not used
+                    n_output_devices++;
+                    g_print("output_device: name=%s descr=%s\n",name,descr);
                 }
                 // fprintf(stderr,"output_device: %s\n", device_id);
             }
-fprintf(stderr,"output_device: %s\n",device_id);
-          }
 
-          if (name != NULL)
-            free(name);
-          if (descr != NULL)
-            free(descr);
-          if (io != NULL)
-            free(io);
-          n++;
+            if (name != NULL)
+                free(name);
+            if (descr != NULL)
+                free(descr);
+            if (io != NULL)
+                free(io);
+            n++;
         }
         snd_device_name_free_hint(hints);
-      }
-      break;
+    }
+    break;
 #endif
-  }
-  g_print("n_input_devices=%d\n", n_input_devices);
+    }
+    g_print("n_input_devices=%d\n", n_input_devices);
 }
 
 int audio_get_backends(RADIO *r) {
