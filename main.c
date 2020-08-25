@@ -508,45 +508,56 @@ static void activate_hpsdr(GtkApplication *app, gpointer data) {
     sprintf(png_path1,"/usr/share/linhpsdr/hpsdr.png");
     sprintf(png_path2,"./hpsdr.png");
 #endif
-  main_window = gtk_application_window_new (app);
-  sprintf(title,"LinHPSDR (%s)",version);
-  gtk_window_set_title (GTK_WINDOW (main_window), title);
-  gtk_window_set_resizable(GTK_WINDOW(main_window), FALSE);
-  GError *error;
-  if(!gtk_window_set_icon_from_file (GTK_WINDOW(main_window), png_path, &error)) {
-    g_print("Warning: failed to set icon for main_window: %s\n",png_path);
-    if(error!=NULL) {
-      g_print("%s\n",error->message);
+    main_window = gtk_application_window_new(app);
+
+    // set title text
+    sprintf(title, "LinHPSDR (%s)",version);
+    gtk_window_set_title (GTK_WINDOW (main_window), title);
+    gtk_window_set_resizable(GTK_WINDOW(main_window), FALSE);
+
+    /* XXX: check if png_path1 exists. If not check if png_path2
+       exists. If it doesn't don't bother with setting the icon.
+    */
+    /* set icon image */
+    GError *error;
+    if(!gtk_window_set_icon_from_file (GTK_WINDOW(main_window), png_path2, &error)) {
+        g_print("Warning: failed to set icon for main_window: %s\n",png_path2);
+        if(error!=NULL) {
+            g_print("%s\n",error->message);
+        }
     }
-  }
-  g_signal_connect (main_window, "delete-event", G_CALLBACK (main_delete), NULL);
 
-  grid = gtk_grid_new();
-  //gtk_widget_set_size_request(grid, 800, 480);
-  //gtk_grid_set_row_homogeneous(GTK_GRID(grid),TRUE);
-  //gtk_grid_set_column_homogeneous(GTK_GRID(grid),FALSE);
+    g_signal_connect (main_window, "delete-event", G_CALLBACK (main_delete), NULL);
 
-  image_event_box=gtk_event_box_new();
+    grid = gtk_grid_new();
+    //gtk_widget_set_size_request(grid, 800, 480);
+    //gtk_grid_set_row_homogeneous(GTK_GRID(grid),TRUE);
+    //gtk_grid_set_column_homogeneous(GTK_GRID(grid),FALSE);
 
-  image=gtk_image_new_from_file(png_path);
-  gtk_container_add(GTK_CONTAINER(image_event_box),image);
-  gtk_grid_attach(GTK_GRID(grid), image_event_box, 0, 0, 1, 1);
-  gtk_widget_set_events(image_event_box, gtk_widget_get_events(image_event_box)|GDK_BUTTON_PRESS_MASK);
+    image_event_box = gtk_event_box_new();
 
-  gtk_container_add (GTK_CONTAINER (main_window), grid);
+    image = gtk_image_new_from_file(png_path2);
+    gtk_container_add(GTK_CONTAINER(image_event_box),image);
+    gtk_grid_attach(GTK_GRID(grid), image_event_box, 0, 0, 1, 1);
+    gtk_widget_set_events(image_event_box,
+                          gtk_widget_get_events(image_event_box) | GDK_BUTTON_PRESS_MASK);
 
-  retry=gtk_button_new_with_label("Retry Discovery");
-  g_signal_connect(retry,"clicked",G_CALLBACK(retry_cb),NULL);
-  gtk_grid_attach(GTK_GRID(grid), retry, 1, 1, 1, 1);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
 
-  start=gtk_button_new_with_label("Start Radio");
-  g_signal_connect(start,"clicked",G_CALLBACK(start_cb),NULL);
-  gtk_grid_attach(GTK_GRID(grid), start, 4, 1, 1, 1);
+    gtk_container_add(GTK_CONTAINER (main_window), grid);
+    gtk_container_set_border_width(GTK_CONTAINER (main_window), 10);
 
-  //gtk_widget_show_all(main_window);
+    retry = gtk_button_new_with_label("Retry Discovery");
+    g_signal_connect(retry,"clicked",G_CALLBACK(retry_cb),NULL);
+    gtk_grid_attach(GTK_GRID(grid), retry, 1, 1, 1, 1);
 
-  g_idle_add(check_wisdom,NULL);
+    start = gtk_button_new_with_label("Start Radio");
+    g_signal_connect(start,"clicked",G_CALLBACK(start_cb),NULL);
+    gtk_grid_attach_next_to(GTK_GRID(grid), start, retry, GTK_POS_RIGHT, 1, 1);
 
+    //gtk_widget_show_all(main_window);
+
+    g_idle_add(check_wisdom,NULL);
 }
 
 int main(int argc, char **argv) {
