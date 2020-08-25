@@ -999,7 +999,7 @@ static void process_wideband_buffer(unsigned char  *buffer) {
 }
 
 void ozy_send_buffer() {
-  int i,j;
+  int j;
   int count;
   BAND *band;
   int nreceivers;
@@ -1265,207 +1265,216 @@ void ozy_send_buffer() {
         }
         break;
       case 3:
-        {
-        
-        gint tx_mode=USB;
-        tx_receiver=radio->transmitter->rx;
-        if(tx_receiver!=NULL) {
-          if(radio->transmitter->rx->split) {
-            tx_mode=tx_receiver->mode_b;
-          } else {
-            tx_mode=tx_receiver->mode_a;
-          }
-        }
-        
-        
-        int level=0;
-        // Always send TX drive level for CW mode
-        if(isTransmitting(radio) || (tx_mode==CWL) || (tx_mode==CWU)) {
-          BAND *band;
-          if(radio->transmitter!=NULL) {
-            if(radio->transmitter->rx!=NULL) {
+      {
+          gint tx_mode = USB;
+          tx_receiver = radio->transmitter->rx;
+          if(tx_receiver != NULL) {
               if(radio->transmitter->rx->split) {
-                band=band_get_band(radio->transmitter->rx->band_b);
+                  tx_mode=tx_receiver->mode_b;
               } else {
-                band=band_get_band(radio->transmitter->rx->band_a);
+                  tx_mode=tx_receiver->mode_a;
               }
-            }
           }
-    
-          int power=0;
+
+          int level = 0;
+          // Always send TX drive level for CW mode
           if(isTransmitting(radio) || (tx_mode==CWL) || (tx_mode==CWU)) {
-            if(radio->tune && !radio->transmitter->tune_use_drive) {
-              power=(int)(radio->transmitter->drive/100.0*radio->transmitter->tune_percent);
-            } else {
-              power=(int)radio->transmitter->drive;
-            }
-          }
+              BAND *band = NULL;
+              if(radio->transmitter != NULL) {
+                  if(radio->transmitter->rx != NULL) {
+                      if(radio->transmitter->rx->split) {
+                          band = band_get_band(radio->transmitter->rx->band_b);
+                      } else {
+                          band = band_get_band(radio->transmitter->rx->band_a);
+                      }
+                  }
+              }
 
-          double target_dbm = 10.0 * log10(power * 1000.0);
-          double gbb=band->pa_calibration;
-          target_dbm-=gbb;
-          double target_volts = sqrt(pow(10, target_dbm * 0.1) * 0.05);
-          double volts=min((target_volts / 0.8), 1.0);
-          double actual_volts=volts*(1.0/0.98);
+              int power = 0;
+              if(isTransmitting(radio) || (tx_mode==CWL) || (tx_mode==CWU)) {
+                  if(radio->tune && !radio->transmitter->tune_use_drive) {
+                      power = (int)(radio->transmitter->drive/100.0 * radio->transmitter->tune_percent);
+                  } else {
+                      power = (int)radio->transmitter->drive;
+                  }
+              }
+
+              /* XXX: verify with PowerSDR code */
+              double target_dbm = 10.0 * log10(power * 1000.0);
+              double gbb = band->pa_calibration;
+              target_dbm -= gbb;
+              double target_volts = sqrt(pow(10, target_dbm * 0.1) * 0.05);
+              double volts = min((target_volts / 0.8), 1.0);
+              double actual_volts = volts * (1.0/0.98);
   
-          if(actual_volts<0.0) {
-            actual_volts=0.0;
-          } else if(actual_volts>1.0) {
-            actual_volts=1.0;
-          }
+              if (actual_volts < 0.0) {
+                  actual_volts = 0.0;
+              } else if(actual_volts > 1.0) {
+                  actual_volts = 1.0;
+              }
   
-          level=(int)(actual_volts*255.0);
-        }
-
-        output_buffer[C0]=0x12;
-        output_buffer[C1]=level&0xFF;
-        output_buffer[C2]=0x00;
-        if(radio->mic_boost) {
-          output_buffer[C2]|=0x01;
-        }
-        if(radio->mic_linein) {
-          output_buffer[C2]|=0x02;
-        }
-        
-        if ((radio->discovered->device==DEVICE_HERMES_LITE2) && (radio->enable_pa)) {
-          output_buffer[C2]|=0x2C;
-        }
-        else {
-          if(radio->filter_board==APOLLO) {
-            output_buffer[C2]|=0x2C;
+              level = (int)(actual_volts * 255.0);
           }
-        }
-        if(((radio->filter_board==APOLLO) || (radio->discovered->device==DEVICE_HERMES_LITE2)) && radio->tune) {
-            output_buffer[C2]|=0x10;
-        }
-        
-        output_buffer[C3]=0x00;
-        if(radio->transmitter->rx->band_a==band6) {
-          output_buffer[C3]=output_buffer[C3]|0x40; // Alex 6M low noise amplifier
-        }
-        band=band_get_band(radio->transmitter->rx->band_a);
-        if(isTransmitting(radio)) {
-          if(radio->transmitter->rx->split) {
-            band=band_get_band(radio->transmitter->rx->band_b);
-          }
-        }
-        if(band->disablePA) {
-          output_buffer[C3]=output_buffer[C3]|0x80; // disable PA
-        }
-        output_buffer[C4]=0x00;
 
-        switch(radio->adc[0].filters) {
+          output_buffer[C0] = 0x12;
+          output_buffer[C1] = level & 0xFF;
+          output_buffer[C2] = 0x00;
+          if(radio->mic_boost) {
+              output_buffer[C2] |= 0x01;
+          }
+          if(radio->mic_linein) {
+              output_buffer[C2] |= 0x02;
+          }
+        
+          if ((radio->discovered->device == DEVICE_HERMES_LITE2) && (radio->enable_pa)) {
+              output_buffer[C2] |= 0x2C;
+          }
+          else {
+              if(radio->filter_board == APOLLO) {
+                  output_buffer[C2] |= 0x2C;
+              }
+          }
+          if(((radio->filter_board==APOLLO) ||
+              (radio->discovered->device == DEVICE_HERMES_LITE2)) &&
+             radio->tune) {
+              output_buffer[C2] |= 0x10;
+          }
+        
+          output_buffer[C3] = 0x00;
+          if(radio->transmitter->rx->band_a == band6) {
+              output_buffer[C3] = output_buffer[C3] | 0x40; // Alex 6M low noise amplifier
+          }
+
+          band = band_get_band(radio->transmitter->rx->band_a);
+          if(isTransmitting(radio)) {
+              if(radio->transmitter->rx->split) {
+                  band = band_get_band(radio->transmitter->rx->band_b);
+              }
+          }
+          if(band->disablePA) {
+              output_buffer[C3] = output_buffer[C3] | 0x80; // disable PA
+          }
+          output_buffer[C4] = 0x00;
+
+          switch(radio->adc[0].filters) {
           case AUTOMATIC:
-            // nothing to do as the firmware sets the filters
-            break;
-          case MANUAL:
-            output_buffer[C2]|=0x40;
-            switch(radio->adc[0].hpf) {
-              case BYPASS:
-              output_buffer[C2]|=0x40;  // MANUAL 
-              output_buffer[C3]|=0x20;  // BYPASS all HPFs
+              // nothing to do as the firmware sets the filters
               break;
+          case MANUAL:
+              output_buffer[C2] |= 0x40;
+              switch(radio->adc[0].hpf) {
+              case BYPASS:
+                  output_buffer[C2] |= 0x40;  // MANUAL 
+                  output_buffer[C3] |= 0x20;  // BYPASS all HPFs
+                  break;
               case HPF_1_5:
-                output_buffer[C3]|=0x10;
-                break;
+                  output_buffer[C3]|=0x10;
+                  break;
               case HPF_6_5:
-                output_buffer[C3]|=0x08;
-                break;
+                  output_buffer[C3]|=0x08;
+                  break;
               case HPF_9_5:
-                output_buffer[C3]|=0x04;
-                break;
+                  output_buffer[C3]|=0x04;
+                  break;
               case HPF_13:
-                output_buffer[C3]|=0x01;
-                break;
+                  output_buffer[C3]|=0x01;
+                  break;
               case  HPF_20:
-                output_buffer[C3]|=0x02;
-                break;
-            }
-            switch(radio->adc[0].lpf) {
+                  output_buffer[C3]|=0x02;
+                  break;
+              }
+
+              switch(radio->adc[0].lpf) {
               case LPF_160:
-                output_buffer[C3]|=0x08;
-                break;
+                  output_buffer[C3]|=0x08;
+                  break;
               case LPF_80:
-                output_buffer[C3]|=0x04;
-                break;
+                  output_buffer[C3]|=0x04;
+                  break;
               case LPF_60_40:
-                output_buffer[C3]|=0x02;
-                break;
+                  output_buffer[C3]|=0x02;
+                  break;
               case LPF_30_20:
-                output_buffer[C3]|=0x01;
-                break;
+                  output_buffer[C3]|=0x01;
+                  break;
               case  LPF_17_15:
-                output_buffer[C3]|=0x40;
-                break;
+                  output_buffer[C3]|=0x40;
+                  break;
               case  LPF_12_10:
-                output_buffer[C3]|=0x20;
-                break;
+                  output_buffer[C3]|=0x20;
+                  break;
               case  LPF_6:
-                output_buffer[C3]|=0x10;
-                break;
-            }
-            break;
+                  output_buffer[C3]|=0x10;
+                  break;
+              }
+              break;
           }
+      }
+      break;
+    case 4:
+        output_buffer[C0] = 0x14;
+        output_buffer[C1] = 0x00;
+        for(size_t i = 0; i < 2; i++) {
+            output_buffer[C1] |= (radio->adc[i].preamp << i);
         }
-        break;
-      case 4:
-        output_buffer[C0]=0x14;
-        output_buffer[C1]=0x00;
-        for(i=0;i<2;i++) {
-          output_buffer[C1]|=(radio->adc[i].preamp<<i);
-        }
-        if(radio->mic_ptt_enabled==0) {
-          output_buffer[C1]|=0x40;
+        if(radio->mic_ptt_enabled == 0) {
+            output_buffer[C1] |= 0x40;
         }
         if(radio->mic_bias_enabled) {
-          output_buffer[C1]|=0x20;
+            output_buffer[C1] |= 0x20;
         }
         if(radio->mic_ptt_tip_bias_ring) {
-          output_buffer[C1]|=0x10;
+          output_buffer[C1] |= 0x10;
         }
-        output_buffer[C2]=0x00;
-        output_buffer[C2]|=radio->linein_gain;
+        output_buffer[C2] = 0x00;
+        output_buffer[C2] |= radio->linein_gain;
 #ifdef PURESIGNAL
         if(isTransmitting(radio) && radio->transmitter->puresignal) {
-          output_buffer[C2]|=0x40;
+            output_buffer[C2] |= 0x40;
         }
 #endif
-        output_buffer[C3]=0x00;
+        output_buffer[C3] = 0x00;
   
-        output_buffer[C4]=0x00;
+        output_buffer[C4] = 0x00;
         if(radio->discovered->device==DEVICE_HERMES_LITE2) {
-          output_buffer[C4]=0x40;
-          // HL2 extends into [5:0] of this buffer          
-          output_buffer[C4]|=(((int)radio->adc[0].attenuation + 12)&0x3F);
+            output_buffer[C4] = 0x40;
+            // HL2 extends into [5:0] of this buffer          
+            output_buffer[C4]|=(((int)radio->adc[0].attenuation + 12)&0x3F);
         } else if(radio->discovered->device==DEVICE_HERMES_LITE) {
-          if(!radio->adc[0].enable_step_attenuation) {
-            output_buffer[C4]=0x20;
-          }        
-        } else if(radio->discovered->device==DEVICE_HERMES || radio->discovered->device==DEVICE_ANGELIA || radio->discovered->device==DEVICE_ORION || radio->discovered->device==DEVICE_ORION2) {
-          if(radio->adc[0].enable_step_attenuation) {
-            output_buffer[C4]=0x20;
-          }
-          output_buffer[C4]|=(int)radio->adc[0].attenuation&0x1F;
+            if(!radio->adc[0].enable_step_attenuation) {
+                output_buffer[C4]=0x20;
+            }
+        } else if(radio->discovered->device==DEVICE_HERMES ||
+                  radio->discovered->device==DEVICE_ANGELIA ||
+                  radio->discovered->device==DEVICE_ORION ||
+                  radio->discovered->device==DEVICE_ORION2) {
+            if(radio->adc[0].enable_step_attenuation) {
+                output_buffer[C4]=0x20;
+            }
+            output_buffer[C4]|=(int)radio->adc[0].attenuation&0x1F;
         } else {
-          output_buffer[C4]=0x00;
+            output_buffer[C4]=0x00;
         }
         break;
-      case 5:
+    case 5:
         output_buffer[C0]=0x16;
         output_buffer[C1]=0x00;
-        if(radio->receivers>=2) {
-          if(radio->discovered->device==DEVICE_HERMES || radio->discovered->device==DEVICE_ANGELIA || radio->discovered->device==DEVICE_ORION || radio->discovered->device==DEVICE_ORION2) {
-            /*output_buffer[C1]=0x20|(int)radio->receiver[1]->attenuation;*/
-          }
+        if(radio->receivers >= 2) {
+            if(radio->discovered->device==DEVICE_HERMES ||
+               radio->discovered->device==DEVICE_ANGELIA ||
+               radio->discovered->device==DEVICE_ORION ||
+               radio->discovered->device==DEVICE_ORION2) {
+                /*output_buffer[C1]=0x20|(int)radio->receiver[1]->attenuation;*/
+            }
         }
         output_buffer[C2]=0x00;
         if(radio->cw_keys_reversed) {
-          output_buffer[C2]|=0x40;
+            output_buffer[C2]|=0x40;
         }
         output_buffer[C3]=radio->cw_keyer_speed | (radio->cw_keyer_mode<<6);
         output_buffer[C4]=radio->cw_keyer_weight | (radio->cw_keyer_spacing<<7);
         break;
-      case 6:
+    case 6:
         // need to add tx attenuation and rx ADC selection
         output_buffer[C0]=0x1C;
         output_buffer[C1]=0x00;
@@ -1476,104 +1485,105 @@ void ozy_send_buffer() {
         output_buffer[C1]|=(radio->receiver[1]->adc<<6);
         output_buffer[C2]=0x00;
         if(radio->transmitter->puresignal) {
-          output_buffer[C2]|=radio->receiver[2]->adc;
+            output_buffer[C2]|=radio->receiver[2]->adc;
         }
 #else
         if(radio->receiver[0]!=NULL) {
-          output_buffer[C1]|=radio->receiver[0]->adc;
+            output_buffer[C1]|=radio->receiver[0]->adc;
         }
         if(radio->receiver[1]!=NULL) {
-          output_buffer[C1]|=(radio->receiver[1]->adc<<2);
+            output_buffer[C1]|=(radio->receiver[1]->adc<<2);
         }
         if(radio->receiver[2]!=NULL) {
-          output_buffer[C1]|=(radio->receiver[2]->adc<<4);
+            output_buffer[C1]|=(radio->receiver[2]->adc<<4);
         }
         if(radio->receiver[3]!=NULL) {
-          output_buffer[C1]|=(radio->receiver[3]->adc<<6);
+            output_buffer[C1]|=(radio->receiver[3]->adc<<6);
         }
         output_buffer[C2]=0x00;
         if(radio->receiver[4]!=NULL) {
-          output_buffer[C2]|=(radio->receiver[4]->adc);
+            output_buffer[C2]|=(radio->receiver[4]->adc);
         }
         if(radio->receiver[5]!=NULL) {
-          output_buffer[C2]|=(radio->receiver[5]->adc<<2);
+            output_buffer[C2]|=(radio->receiver[5]->adc<<2);
         }
         if(radio->receiver[6]!=NULL) {
-          output_buffer[C2]|=(radio->receiver[6]->adc<<4);
+            output_buffer[C2]|=(radio->receiver[6]->adc<<4);
         }
 #endif
-        output_buffer[C3]=0x00;
-        output_buffer[C3]|=radio->transmitter->attenuation;
-        if(radio->discovered->device==DEVICE_HERMES_LITE2) output_buffer[C3]|=0x80;
+        output_buffer[C3] = 0x00;
+        output_buffer[C3] |= radio->transmitter->attenuation;
+        if(radio->discovered->device == DEVICE_HERMES_LITE2)
+            output_buffer[C3]|=0x80;
         output_buffer[C4]=0x00;
         break;
-      case 7:
+    case 7:
         output_buffer[C0]=0x1E;
 
         gint tx_mode=USB;
         tx_receiver=radio->transmitter->rx;
         if(tx_receiver!=NULL) {
-          if(radio->transmitter->rx->split) {
-            tx_mode=tx_receiver->mode_b;
-          } else {
-            tx_mode=tx_receiver->mode_a;
-          }
+            if(radio->transmitter->rx->split) {
+                tx_mode=tx_receiver->mode_b;
+            } else {
+                tx_mode=tx_receiver->mode_a;
+            }
         }
 
         output_buffer[C1]=0x00;
         if(tx_mode!=CWU && tx_mode!=CWL) {
-          // output_buffer[C1]|=0x00;
+            // output_buffer[C1]|=0x00;
         } else {
-          if(radio->tune || radio->vox || !radio->cw_keyer_internal || !radio->cwdaemon) {
-            output_buffer[C1]|=0x00;
-          } else {
-            output_buffer[C1]|=0x01;
-          }
+            if(radio->tune || radio->vox || !radio->cw_keyer_internal || !radio->cwdaemon) {
+                output_buffer[C1]|=0x00;
+            } else {
+                output_buffer[C1]|=0x01;
+            }
         }
         output_buffer[C2]=radio->cw_keyer_sidetone_volume;
         
         //CWX enable/disable
-	#ifdef CWDAEMON 
+#ifdef CWDAEMON
         if(radio->discovered->device==DEVICE_HERMES_LITE2) {
-          if(radio->cwdaemon) {
-            radio->cw_keyer_ptt_delay = 0x1;
-          }
-          else {
-            radio->cw_keyer_ptt_delay = 0x0;
-          }
+            if(radio->cwdaemon) {
+                radio->cw_keyer_ptt_delay = 0x1;
+            }
+            else {
+                radio->cw_keyer_ptt_delay = 0x0;
+            }
         }
-	#endif
+#endif
         output_buffer[C3]=radio->cw_keyer_ptt_delay;
         output_buffer[C4]=0x00;
         break;
-      case 8:
+    case 8:
         output_buffer[C0]=0x20;
         output_buffer[C1]=(radio->cw_keyer_hang_time>>2) & 0xFF;
         output_buffer[C2]=radio->cw_keyer_hang_time & 0x03;
         output_buffer[C3]=(radio->cw_keyer_sidetone_frequency>>4) & 0xFF;
         output_buffer[C4]=radio->cw_keyer_sidetone_frequency & 0x0F;
         break;
-      case 9:
+    case 9:
         output_buffer[C0]=0x22;
         output_buffer[C1]=(radio->transmitter->eer_pwm_min>>2) & 0xFF;
         output_buffer[C2]=radio->transmitter->eer_pwm_min & 0x03;
         output_buffer[C3]=(radio->transmitter->eer_pwm_max>>2) & 0xFF;
         output_buffer[C4]=radio->transmitter->eer_pwm_max & 0x03;
         break;
-      case 10:
+    case 10:
         output_buffer[C0]=0x24;
         output_buffer[C1]=0x00;
         if(isTransmitting(radio)) {
-          output_buffer[C1]|=0x80; // ground RX1 on transmit
+            output_buffer[C1]|=0x80; // ground RX1 on transmit
         }
         output_buffer[C2]=0x00;
         if(radio->alex_rx_antenna==5) { // XVTR
-          output_buffer[C2]=0x02;
+            output_buffer[C2]=0x02;
         }
         output_buffer[C3]=0x00;
         output_buffer[C4]=0x00;
         break;
-      case 11:
+    case 11:
         // TX buffer size
         output_buffer[C0]=0x2E;        
         output_buffer[C1]=0x0;        
@@ -1584,10 +1594,10 @@ void ozy_send_buffer() {
     }
 
     if(current_rx==0) {
-      command++;
-      if(command>11) {
-        command=1;
-      }
+        command++;
+        if(command>11) {
+            command=1;
+        }
     }
   }
 
@@ -1595,21 +1605,21 @@ void ozy_send_buffer() {
   gint tx_mode=USB;
   tx_receiver=radio->transmitter->rx;
   if(tx_receiver!=NULL) {
-    if(radio->transmitter->rx->split) {
-      tx_mode=tx_receiver->mode_b;
-    } else {
-      tx_mode=tx_receiver->mode_a;
-    }
+      if(radio->transmitter->rx->split) {
+          tx_mode=tx_receiver->mode_b;
+      } else {
+          tx_mode=tx_receiver->mode_a;
+      }
   }
 
   if(tx_mode==CWU || tx_mode==CWL) {
-    if(radio->tune) {
-      output_buffer[C0]|=0x01;
-    }
+      if(radio->tune) {
+          output_buffer[C0]|=0x01;
+      }
   } else {
-    if(isTransmitting(radio)) {
-      output_buffer[C0]|=0x01;
-    }
+      if(isTransmitting(radio)) {
+          output_buffer[C0]|=0x01;
+      }
   }
 
 #ifdef USBOZY
