@@ -208,7 +208,7 @@ static int discover(void *data) {
     GtkTreeIter iter0;
 
     discovery();
-    g_print("main: discovery found %d devices\n",devices);
+    g_print("main: discovery found %d devices\n", devices);
 
     if(devices>0) {
         view=gtk_tree_view_new();
@@ -330,7 +330,7 @@ static int check_wisdom(void *data) {
 
   sprintf(wisdom_directory,"%s/.local/share/linhpsdr/",g_get_home_dir());
   sprintf(wisdom_file,"%swdspWisdom",wisdom_directory);
-  if(access(wisdom_file,F_OK)<0) {
+  if(access(wisdom_file,F_OK) < 0) {
 #ifdef __APPLE__
       wisdom_sem=sem_open("wisdomsem",O_CREAT,0700,0);
 #else
