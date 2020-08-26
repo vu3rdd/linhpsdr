@@ -21,10 +21,9 @@
 #define _AUDIO_H
 
 enum {
-  USE_SOUNDIO
 #ifndef __APPLE__
-  ,USE_PULSEAUDIO
-  ,USE_ALSA
+    USE_PULSEAUDIO,
+    USE_ALSA,
 #endif
 };
 

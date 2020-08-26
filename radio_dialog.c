@@ -325,11 +325,7 @@ static void boost_cb(GtkWidget *widget, gpointer data) {
 static void update_audio_backends(RADIO *radio) {
   int i;
   gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(audio_backend_combo_box));
-  if(radio->which_audio==USE_SOUNDIO) {
-    for(i=0;i<audio_get_backends(radio);i++) {
-      gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(audio_backend_combo_box),NULL,audio_get_backend_name(i));
-    }
-  }
+
   if(radio->which_audio_backend>=0) {
     radio_change_audio_backend(radio,radio->which_audio_backend);
   }
@@ -891,7 +887,6 @@ GtkWidget *create_radio_dialog(RADIO *radio) {
   gtk_grid_attach(GTK_GRID(grid),audio_frame,col,row++,1,1);
 
   GtkWidget *audio_combo=gtk_combo_box_text_new();
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(audio_combo),NULL,"SOUNDIO");
 #ifndef __APPLE__
   gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(audio_combo),NULL,"PULSEAUDIO");
   gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(audio_combo),NULL,"ALSA");

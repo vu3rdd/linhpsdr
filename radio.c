@@ -435,7 +435,7 @@ void radio_change_audio(RADIO *r,int selected) {
   }
 
   r->which_audio=selected;
-  create_audio(r->which_audio_backend,r->which_audio==USE_SOUNDIO?audio_get_backend_name(r->which_audio_backend):NULL);
+  create_audio(r->which_audio_backend, NULL);
 }
 
 void radio_change_audio_backend(RADIO *r,int selected) {
@@ -457,7 +457,7 @@ void radio_change_audio_backend(RADIO *r,int selected) {
   }
 
   r->which_audio_backend=selected;
-  create_audio(r->which_audio_backend,r->which_audio==USE_SOUNDIO?audio_get_backend_name(r->which_audio_backend):NULL);
+  create_audio(r->which_audio_backend, NULL);
 }
 
 
@@ -1070,7 +1070,7 @@ RADIO *create_radio(DISCOVERED *d) {
 
   r->iqswap = FALSE;
 
-  r->which_audio = USE_SOUNDIO;
+  r->which_audio = USE_PULSEAUDIO;
   r->which_audio_backend = 0;
 
   r->swr_alarm_value = 2.0;
@@ -1085,9 +1085,7 @@ RADIO *create_radio(DISCOVERED *d) {
   radio_change_region(r);
 
   create_audio(r->which_audio_backend,
-               r->which_audio == USE_SOUNDIO ?
-               audio_get_backend_name(r->which_audio_backend):NULL);
-
+               NULL);
   add_receivers(r);
 
   switch(r->discovered->protocol) {

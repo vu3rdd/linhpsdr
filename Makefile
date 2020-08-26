@@ -13,7 +13,7 @@ GTKLIBS=`pkg-config --libs gtk+-3.0`
 #OPENGL_INCLUDES=`pkg-config --cflags epoxy`
 #OPENGL_LIBS=`pkg-config --libs epoxy`
 
-AUDIO_LIBS=-lasound -lpulse-simple -lpulse -lpulse-mainloop-glib -lsoundio
+AUDIO_LIBS=-lasound -lpulse-simple -lpulse -lpulse-mainloop-glib
 
 # uncomment the line below to include SoapySDR support
 #

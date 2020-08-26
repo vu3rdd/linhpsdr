@@ -30,7 +30,6 @@
 #include <sched.h>
 #include <semaphore.h>
 
-#include <soundio/soundio.h>
 #ifndef __APPLE__
 #include <pulse/pulseaudio.h>
 #include <pulse/glib-mainloop.h>
@@ -73,8 +72,6 @@ static snd_pcm_format_t formats[3]={
 static GThread *mic_read_thread_id;
 static void *mic_read_thread(void *arg);
 
-struct SoundIo *soundio;
-
 #ifndef __APPLE__
 //static pa_buffer_attr bufattr;
 static pa_glib_mainloop *main_loop;
@@ -87,331 +84,134 @@ static int ready=0;
 static int sample_rate=48000;
 
 
-static int underflow_count=0;
-
-static void underflow_callback(struct SoundIoOutStream *outstream) {
-  underflow_count++;
-  //g_print("audio_write: underflow %d\n", underflow_count);
-}
-
-static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min, int frame_count_max) {
-  RECEIVER *rx=(RECEIVER *)outstream->userdata;
-  struct SoundIoChannelArea *areas;
-  int frames_left;
-  int frame_count;
-  int err;
-
-  char *read_ptr = soundio_ring_buffer_read_ptr(rx->ring_buffer);
-  int fill_bytes = soundio_ring_buffer_fill_count(rx->ring_buffer);
-  int fill_count = fill_bytes / outstream->bytes_per_frame;
-
-  if (frame_count_min > fill_count) {
-    //g_print("write_callback: not enough data: frame_count_min=%d fill_count=%d bytes_per_frame=%d\n",frame_count_min,fill_count,outstream->bytes_per_frame);
-    // Ring buffer does not have enough data, fill with zeroes.
-    frames_left = frame_count_min;
-    for (;;) {
-      frame_count = frames_left;
-      if (frame_count <= 0)
-        return;
-      if ((err = soundio_outstream_begin_write(outstream, &areas, &frame_count))) {
-        //g_print("write_callback: begin write error: %s\n", soundio_strerror(err));
-        return;
-      }
-      if (frame_count <= 0)
-        return;
-      for (int frame = 0; frame < frame_count; frame += 1) {
-        for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-          memset(areas[ch].ptr, 0, outstream->bytes_per_sample);
-          areas[ch].ptr += areas[ch].step;
-        }
-      }
-      if ((err = soundio_outstream_end_write(outstream)))
-        //g_print("write_callback: end write error: %s\n", soundio_strerror(err));
-        frames_left -= frame_count;
-      }
-    }
-
-    int read_count;
-    if(frame_count_max<fill_count) read_count=frame_count_max; else read_count=fill_count;
-    frames_left = read_count;
-
-    while (frames_left > 0) {
-      int frame_count = frames_left;
-
-      if ((err = soundio_outstream_begin_write(outstream, &areas, &frame_count))) {
-        g_print("begin write error: %s", soundio_strerror(err));
-        return;
-      }
-
-      if (frame_count <= 0)
-        break;
-
-      for (int frame = 0; frame < frame_count; frame += 1) {
-        for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-          memcpy(areas[ch].ptr, read_ptr, outstream->bytes_per_sample);
-          areas[ch].ptr += areas[ch].step;
-          read_ptr += outstream->bytes_per_sample;
-        }
-      }
-
-      if ((err = soundio_outstream_end_write(outstream))) {
-        //g_print("end write error: %s\n", soundio_strerror(err));
-        return;
-      }
-
-      frames_left -= frame_count;
-  }
-
-  soundio_ring_buffer_advance_read_ptr(rx->ring_buffer, read_count * outstream->bytes_per_frame);
-}
-
-static void read_callback(struct SoundIoInStream *instream, int frame_count_min, int frame_count_max) {
-    RADIO *r=(RADIO *)instream->userdata;
-    struct SoundIoChannelArea *areas;
-    int err;
-
-    //if(frame_count_min!=frame_count_max) {
-    if(frame_count_min<=0) {
-      //g_print("read_callback: frame_counts differ min=%d max=%d\n",frame_count_min,frame_count_max);
-      return;
-    }
-
-    if(r->local_microphone_buffer!=NULL) {
-      if(r->local_microphone_buffer_size!=frame_count_min) {
-        free(r->local_microphone_buffer);
-        r->local_microphone_buffer=NULL;
-      }
-    }
-
-    if(r->local_microphone_buffer==NULL) {
-      r->local_microphone_buffer_size=frame_count_min;
-      r->local_microphone_buffer=g_new0(float,r->local_microphone_buffer_size);
-g_print("read_callback: create microphone buffer: %p length=%d (%d bytes)\n",r->local_microphone_buffer,r->local_microphone_buffer_size,instream->bytes_per_sample*r->local_microphone_buffer_size);
-    }
-
-    int frame_count=frame_count_min;
-
-    if((err = soundio_instream_begin_read(instream, &areas, &frame_count))) {
-      g_print("read_callback: begin read error: %s\n", soundio_strerror(err));
-      return;
-    }
-
-    g_mutex_lock(&r->ring_buffer_mutex);
-
-    char *write_ptr = soundio_ring_buffer_write_ptr(r->ring_buffer);
-    int free_bytes = soundio_ring_buffer_free_count(r->ring_buffer);
-    int free_count = free_bytes / instream->bytes_per_frame;
-    if(frame_count!=0 && free_count>=frame_count) {
-      if(areas==NULL) {
-        g_print("read_callback: areas is NULL\n");
-        memset(write_ptr,0,frame_count*instream->bytes_per_sample);
-      } else {
-        memcpy(write_ptr,areas[0].ptr,frame_count*instream->bytes_per_sample);
-      }
-
-      if((err = soundio_instream_end_read(instream))) {
-        g_print("read_callback: end read error: %s", soundio_strerror(err));
-      }
-
-      soundio_ring_buffer_advance_write_ptr(r->ring_buffer, frame_count*instream->bytes_per_frame);
-      g_cond_signal (&r->ring_buffer_cond);
-    } else {
-      g_print("read_callback: frame_count is 0 or free_count too small\n");
-    }
-    g_mutex_unlock (&r->ring_buffer_mutex);
-
-}
 
 int audio_open_output(RECEIVER *rx) {
-  int result=0;
-  int err;
+    int result=0;
+    int err;
 #ifndef __APPLE__
-  pa_sample_spec sample_spec;
+    pa_sample_spec sample_spec;
 #endif
-  switch(radio->which_audio) {
-    case USE_SOUNDIO: {
-g_print("audio_open_output: SOUNDIO: %s\n",rx->audio_name);
-      g_mutex_lock(&rx->local_audio_mutex);
-
-      // find the device
-      rx->output_index=-1;
-      for(int i=0;i<n_output_devices;i++) {
-        if(strcmp(rx->audio_name,output_devices[i].name)==0) {
-          rx->output_index=output_devices[i].index;
-          break;
-        }
-      }
-
-      if(rx->output_index==-1) {
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-  
-      rx->output_device = soundio_get_output_device(soundio, rx->output_index);
-      if(!rx->output_device) {
-        g_print("audio_open_output: could not get output device: out of memory");
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-
-      if(!soundio_device_supports_sample_rate(rx->output_device, sample_rate)) {
-        g_print("audio_open_output: device does not support sample rate of %d",sample_rate);
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-
-      if(!soundio_device_supports_format(rx->output_device, SoundIoFormatFloat32NE)) {
-        g_print("audio_open_output: device does not support SoundIoFormatFloat32NE");
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-
-      // guess that 8 output buffers should be enough
-      int size=8*rx->output_samples*sizeof(float)*2;
-      if(size<32768) size=32768;
-      rx->ring_buffer = soundio_ring_buffer_create(soundio, size);
-      if(!rx->ring_buffer) {
-        g_print("audio_open_output: soundio_ring_buffer_create failed");
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-
-      rx->output_stream = soundio_outstream_create(rx->output_device);
-      if(!rx->output_stream) {
-        g_print("audio_open_output: could not open output device: out of memory");
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-      rx->output_stream->format = SoundIoFormatFloat32NE;
-      rx->output_stream->sample_rate = sample_rate;
-      rx->output_stream->write_callback = write_callback;
-      rx->output_stream->underflow_callback = underflow_callback;
-      rx->output_stream->software_latency = 0.01;
-      rx->output_stream->userdata=(void *)rx;
-
-      if((err = soundio_outstream_open(rx->output_stream))) {
-        g_print("audio_open_output: unable to open output stream: %s", soundio_strerror(err));
-        g_mutex_unlock(&rx->local_audio_mutex);
-        return -1;
-      }
-
-      g_mutex_unlock(&rx->local_audio_mutex);
-      break;
-    }
+    switch(radio->which_audio) {
 #ifndef __APPLE__
     case USE_PULSEAUDIO: {
-g_print("audio_open_output: PULSEAUDIO: %s\n",rx->audio_name);
+        g_print("audio_open_output: PULSEAUDIO: %s\n",rx->audio_name);
 
-      if(rx->audio_name==NULL) {
-        result=-1;
-      } else {
-        g_mutex_lock(&rx->local_audio_mutex);
-        sample_spec.rate=48000;
-        sample_spec.channels=2;
-        sample_spec.format=PA_SAMPLE_FLOAT32NE;
-
-        char stream_id[16];
-        sprintf(stream_id,"RX-%d",rx->channel);
-    
-        rx->playstream=pa_simple_new(NULL,               // Use the default server.
-                        "linHPSDR",           // Our application's name.
-                        PA_STREAM_PLAYBACK,
-                        rx->audio_name,
-                        stream_id,            // Description of our stream.
-                        &sample_spec,                // Our sample format.
-                        NULL,               // Use default channel map
-                        NULL,               // Use default buffering attributes.
-                        &err               // error code if returns NULL
-                        );
-    
-        if(rx->playstream!=NULL) {
-          rx->local_audio_buffer_offset=0;
-          rx->local_audio_buffer=g_new0(float,2*rx->local_audio_buffer_size);
-          fprintf(stderr,"audio_open_output: allocated local_audio_buffer %p size %ld bytes\n",rx->local_audio_buffer,2*rx->local_audio_buffer_size*sizeof(float));
+        if(rx->audio_name==NULL) {
+            result=-1;
         } else {
-          result=-1;
-          fprintf(stderr,"pa-simple_new failed: err=%d\n",err);
+            g_mutex_lock(&rx->local_audio_mutex);
+            sample_spec.rate=48000;
+            sample_spec.channels=2;
+            sample_spec.format=PA_SAMPLE_FLOAT32NE;
+
+            char stream_id[16];
+            sprintf(stream_id,"RX-%d",rx->channel);
+            rx->playstream=pa_simple_new(NULL,               // Use the default server.
+                                         "linHPSDR",           // Our application's name.
+                                         PA_STREAM_PLAYBACK,
+                                         rx->audio_name,
+                                         stream_id,            // Description of our stream.
+                                         &sample_spec,                // Our sample format.
+                                         NULL,               // Use default channel map
+                                         NULL,               // Use default buffering attributes.
+                                         &err               // error code if returns NULL
+                );
+
+            if(rx->playstream!=NULL) {
+                rx->local_audio_buffer_offset=0;
+                rx->local_audio_buffer=g_new0(float,2*rx->local_audio_buffer_size);
+                fprintf(stderr,"audio_open_output: allocated local_audio_buffer %p size %ld bytes\n",rx->local_audio_buffer,2*rx->local_audio_buffer_size*sizeof(float));
+            } else {
+                result=-1;
+                fprintf(stderr,"pa-simple_new failed: err=%d\n",err);
+            }
+            g_mutex_unlock(&rx->local_audio_mutex);
         }
-        g_mutex_unlock(&rx->local_audio_mutex);
-      }
-      break;
+        break;
     }
     case USE_ALSA: {
-g_print("audio_open_output: ALSA: %s\n",rx->audio_name);
-      int err;
-      unsigned int rate = 48000;
-      unsigned int channels=2;
-      int soft_resample=1;
-      unsigned int latency=125000;      
-      
-      if(rx->audio_name==NULL) {
-        rx->local_audio=0;
-        return -1;
-      }
+        g_print("audio_open_output: ALSA: %s\n",rx->audio_name);
+        int err;
+        unsigned int rate = 48000;
+        unsigned int channels=2;
+        int soft_resample=1;
+        unsigned int latency=125000;      
 
-      int i;
-      char hw[128];
-
-      i=0;
-      while(i<127 && rx->audio_name[i]!=' ') {
-        hw[i]=rx->audio_name[i];
-        i++;
-      }
-      hw[i]='\0';
-      
-    g_print("audio_open_output: hw=%s\n",hw);
-
-      for(i=0;i<FORMATS;i++) {
-        g_mutex_lock(&rx->local_audio_mutex);
-        if ((err = snd_pcm_open (&rx->playback_handle, hw, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
-          g_print("audio_open_output: cannot open audio device %s (%s)\n", 
-                  hw,
-                  snd_strerror (err));
-          g_mutex_unlock(&rx->local_audio_mutex);
-          return err;
+        if(rx->audio_name==NULL) {
+            rx->local_audio=0;
+            return -1;
         }
-    g_print("audio_open_output: handle=%p\n",rx->playback_handle);
 
-    g_print("audio_open_output: trying format %s (%s)\n",snd_pcm_format_name(formats[i]),snd_pcm_format_description(formats[i]));
-        if ((err = snd_pcm_set_params (rx->playback_handle,formats[i],SND_PCM_ACCESS_RW_INTERLEAVED,channels,rate,soft_resample,latency)) < 0) {
-          g_print("audio_open_output: snd_pcm_set_params failed: %s\n",snd_strerror(err));
-          g_mutex_unlock(&rx->local_audio_mutex);
-          audio_close_output(rx);
-          continue;
-        } else {
-    g_print("audio_open_output: using format %s (%s)\n",snd_pcm_format_name(formats[i]),snd_pcm_format_description(formats[i]));
-          rx->local_audio_format=formats[i];
-          break;
+        int i;
+        char hw[128];
+
+        i=0;
+        while(i<127 && rx->audio_name[i]!=' ') {
+            hw[i]=rx->audio_name[i];
+            i++;
         }
-      }
+        hw[i]='\0';
 
-      if(i>=FORMATS) {
-        g_print("audio_open_output: cannot find usable format\n");
-        return err;
-      }
+        g_print("audio_open_output: hw=%s\n",hw);
 
-      rx->local_audio_buffer_offset=0;
-      switch(rx->local_audio_format) {
+        for(i=0;i<FORMATS;i++) {
+            g_mutex_lock(&rx->local_audio_mutex);
+            if ((err = snd_pcm_open (&rx->playback_handle, hw, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
+                g_print("audio_open_output: cannot open audio device %s (%s)\n", 
+                        hw,
+                        snd_strerror (err));
+                g_mutex_unlock(&rx->local_audio_mutex);
+                return err;
+            }
+            g_print("audio_open_output: handle=%p\n",rx->playback_handle);
+
+            g_print("audio_open_output: trying format %s (%s)\n",snd_pcm_format_name(formats[i]),snd_pcm_format_description(formats[i]));
+            if ((err = snd_pcm_set_params (rx->playback_handle,
+                                           formats[i],
+                                           SND_PCM_ACCESS_RW_INTERLEAVED,
+                                           channels,
+                                           rate,
+                                           soft_resample,
+                                           latency)) < 0) {
+                g_print("audio_open_output: snd_pcm_set_params failed: %s\n",snd_strerror(err));
+                g_mutex_unlock(&rx->local_audio_mutex);
+                audio_close_output(rx);
+                continue;
+            } else {
+                g_print("audio_open_output: using format %s (%s)\n",snd_pcm_format_name(formats[i]),snd_pcm_format_description(formats[i]));
+                rx->local_audio_format=formats[i];
+                break;
+            }
+        }
+
+        if(i>=FORMATS) {
+            g_print("audio_open_output: cannot find usable format\n");
+            return err;
+        }
+
+        rx->local_audio_buffer_offset=0;
+        switch(rx->local_audio_format) {
         case SND_PCM_FORMAT_S16_LE:
-    g_print("audio_open_output: local_audio_buffer: size=%d sample=%ld\n",rx->local_audio_buffer_size,sizeof(gint16));
-          rx->local_audio_buffer=g_new(gint16,2*rx->local_audio_buffer_size);
+            g_print("audio_open_output: local_audio_buffer: size=%d sample=%ld\n",rx->local_audio_buffer_size,sizeof(gint16));
+            rx->local_audio_buffer=g_new(gint16,2*rx->local_audio_buffer_size);
             break;
         case SND_PCM_FORMAT_S32_LE:
-    g_print("audio_open_output: local_audio_buffer: size=%d sample=%ld\n",rx->local_audio_buffer_size,sizeof(gint32));
-          rx->local_audio_buffer=g_new(gint32,2*rx->local_audio_buffer_size);
-          break;
+            g_print("audio_open_output: local_audio_buffer: size=%d sample=%ld\n",rx->local_audio_buffer_size,sizeof(gint32));
+            rx->local_audio_buffer=g_new(gint32,2*rx->local_audio_buffer_size);
+            break;
         case SND_PCM_FORMAT_FLOAT_LE:
-    g_print("audio_open_output: local_audio_buffer: size=%d sample=%ld\n",rx->local_audio_buffer_size,sizeof(gfloat));
-          rx->local_audio_buffer=g_new(gfloat,2*rx->local_audio_buffer_size);
-          break;
+            g_print("audio_open_output: local_audio_buffer: size=%d sample=%ld\n",rx->local_audio_buffer_size,sizeof(gfloat));
+            rx->local_audio_buffer=g_new(gfloat,2*rx->local_audio_buffer_size);
+            break;
 
-        default: return -1;
+        default:
+            return -1;
       }
       
-      g_print("audio_open_output: rx=%d handle=%p buffer=%p size=%d\n",rx->channel,rx->playback_handle,rx->local_audio_buffer,rx->local_audio_buffer_size);      
+        g_print("audio_open_output: rx=%d handle=%p buffer=%p size=%d\n",rx->channel,rx->playback_handle,rx->local_audio_buffer,rx->local_audio_buffer_size);      
 
-      g_mutex_unlock(&rx->local_audio_mutex);          
-      break;
+        g_mutex_unlock(&rx->local_audio_mutex);          
+        break;
     }
 #endif
   }
@@ -427,89 +227,6 @@ int audio_open_input(RADIO *r) {
 
   g_print("%s\n",__FUNCTION__);
   switch(radio->which_audio) {
-    case USE_SOUNDIO: {
-      if(r->microphone_name==NULL) {
-        g_print("audio_open_input: microphone name is NULL\n");
-        return -1;
-      }
-
-      g_print("audio_open_input: %s\n",r->microphone_name);
-      // find the device
-      int input_index=-1;
-      for(int i=0;i<n_input_devices;i++) {
-        if(strcmp(r->microphone_name,input_devices[i].name)==0) {
-          input_index=input_devices[i].index;
-          break;
-        }
-      }
-
-      if(input_index==-1) {
-        g_print("audio_open_input: did not find %s\n",r->microphone_name);
-        return -1;
-      }
-
-
-      r->input_device = soundio_get_input_device(soundio, input_index);
-      if(!r->input_device) {
-        g_print("audio_open_input: could not get input device: out of memory");
-        return -1;
-      }
-
-      if(!soundio_device_supports_sample_rate(r->input_device, sample_rate)) {
-        g_print("audio_open_input: device does not support sample rate of %d",sample_rate);
-        return -1;
-      }
-
-      if(!soundio_device_supports_format(r->input_device, SoundIoFormatFloat32NE)) {
-        g_print("audio_open_input: device does not support SoundIoFormatFloat32NE");
-        return -1;
-      }
-
-      r->input_stream = soundio_instream_create(r->input_device);
-      if(!r->input_stream) {
-        g_print("audio_open_input: could not open input device: out of memory");
-        return -1;
-      }
-      r->input_stream->format = SoundIoFormatFloat32NE;
-      r->input_stream->sample_rate = sample_rate;
-      r->input_stream->read_callback = read_callback;
-      r->input_stream->userdata=(void *)r;
-
-      if((err = soundio_instream_open(r->input_stream))) {
-        g_print("audio_open_input: unable to open input stream: %s", soundio_strerror(err));
-        return -1;
-      }
-
-      // guess that 8 input buffers should be enough
-      int size=8*512*sizeof(float);
-      r->ring_buffer = soundio_ring_buffer_create(soundio, size);
-      if(!r->ring_buffer) {
-        g_print("audio_open_input: soundio_ring_buffer_create failed");
-        return -1;
-      }
-
-      if((err = soundio_instream_start(r->input_stream))) {
-        g_print("unable to start input device: %s", soundio_strerror(err));
-        return -1;
-      }
-      r->input_started=TRUE;
-      running=TRUE;
-      g_print("%s: SOUNDIO mic_read_thread\n",__FUNCTION__);
-      mic_read_thread_id = g_thread_new( "mic_thread", mic_read_thread, r);
-      if(!mic_read_thread_id ) {
-        fprintf(stderr,"g_thread_new failed on mic_read_thread\n");
-        soundio_instream_destroy(r->input_stream);
-        soundio_device_unref(r->input_device);
-        soundio_ring_buffer_destroy(r->ring_buffer);
-        if(r->local_microphone_buffer!=NULL) {
-          g_free(r->local_microphone_buffer);
-          r->local_microphone_buffer=NULL;
-        }
-        running=FALSE;
-        result=-1;
-      }
-      break;
-    }
 #ifndef __APPLE__
     case USE_PULSEAUDIO: {
       if(r->microphone_name==NULL) {
@@ -654,24 +371,6 @@ g_print("audio_open_input: mic_buffer: size=%d channels=%d sample=%ld bytes\n",r
 void audio_close_output(RECEIVER *rx) {
  g_print("audio_close_output\n");
   switch(radio->which_audio) {
-    case USE_SOUNDIO: {
-      g_mutex_lock(&rx->local_audio_mutex);
-      if(rx->output_stream!=NULL) {
-        soundio_outstream_destroy(rx->output_stream);
-        rx->output_stream=NULL;
-      }
-      if(rx->output_device!=NULL) {
-        soundio_device_unref(rx->output_device);
-        rx->output_device=NULL;
-      } 
-      if(rx->ring_buffer!=NULL) {
-        soundio_ring_buffer_destroy(rx->ring_buffer);
-        rx->ring_buffer=NULL;
-      }
-      rx->output_started=FALSE;
-      g_mutex_unlock(&rx->local_audio_mutex);
-      break;
-    }
 #ifndef __APPLE__
     case USE_PULSEAUDIO: {
       g_mutex_lock(&rx->local_audio_mutex);
@@ -708,14 +407,6 @@ void audio_close_output(RECEIVER *rx) {
 void audio_close_input(RADIO *r) {
   g_print("Close audio input\n");
   switch(radio->which_audio) {
-    case USE_SOUNDIO: {
-      g_mutex_lock(&r->local_microphone_mutex);
-      soundio_instream_destroy(r->input_stream);
-      soundio_device_unref(r->input_device);
-      soundio_ring_buffer_destroy(r->ring_buffer);
-      g_mutex_unlock(&r->local_microphone_mutex);
-      break;
-    }
 #ifndef __APPLE__
     case USE_PULSEAUDIO: {
       g_mutex_lock(&r->local_microphone_mutex);
@@ -791,18 +482,6 @@ void audio_start_output(RECEIVER *rx)
 {
     int err;
     switch(radio->which_audio) {
-    case USE_SOUNDIO:
-        if(rx->output_stream!=NULL) {
-            if(!rx->output_started) {
-                underflow_count=0;
-                if((err = soundio_outstream_start(rx->output_stream))) {
-                    g_print("audio_start_output: unable to start output device: %s", soundio_strerror(err));
-                } else {
-                    rx->output_started=TRUE;
-                }
-            }
-        }
-        break;
 #ifndef __APPLE__
     case USE_PULSEAUDIO:
         rx->output_started=TRUE;
@@ -822,28 +501,6 @@ int audio_write(RECEIVER *rx, float left_sample, float right_sample)
     float *float_buffer;
   
     switch(radio->which_audio) {
-    case USE_SOUNDIO:
-    {
-        g_mutex_lock(&rx->local_audio_mutex);
-
-        float samples[2];
-        samples[0] = left_sample;
-        samples[1] = right_sample;
-
-        if(rx->ring_buffer!=NULL) {
-            char *buf = soundio_ring_buffer_write_ptr(rx->ring_buffer);
-            int fill_count = sizeof(float)*2;
-            int free = soundio_ring_buffer_free_count(rx->ring_buffer);
-            if(free < fill_count) {
-                //g_print("audio_write: ring buffer full: need %d free %d\n",fill_count,free);
-            } else {
-                memcpy(buf, &samples[0], fill_count);
-                soundio_ring_buffer_advance_write_ptr(rx->ring_buffer, fill_count);
-            }
-        }
-        g_mutex_unlock(&rx->local_audio_mutex);
-        break;
-    }
 #ifndef __APPLE__
     case USE_PULSEAUDIO:
     {
@@ -955,34 +612,6 @@ static void *mic_read_thread(gpointer arg)
 
     g_print("mic_read_thread: ENTRY\n");
     switch(radio->which_audio) {
-    case USE_SOUNDIO:
-        while(running) {
-            g_mutex_lock (&r->ring_buffer_mutex);
-
-            while(soundio_ring_buffer_fill_count(r->ring_buffer) == 0)
-                g_cond_wait(&r->ring_buffer_cond, &r->ring_buffer_mutex);
-
-            char *read_ptr = soundio_ring_buffer_read_ptr(r->ring_buffer);
-
-            int fill_bytes = soundio_ring_buffer_fill_count(r->ring_buffer);
-            if(fill_bytes > (r->local_microphone_buffer_size * sizeof(float))) {
-                fill_bytes = r->local_microphone_buffer_size * sizeof(float);
-            }
-
-            memcpy(r->local_microphone_buffer, read_ptr, fill_bytes);
-            soundio_ring_buffer_advance_read_ptr(r->ring_buffer, fill_bytes);
-            g_mutex_unlock (&r->ring_buffer_mutex);
-
-            switch(r->discovered->protocol) {
-            case PROTOCOL_1:
-                protocol1_process_local_mic(r);
-                break;
-            case PROTOCOL_2:
-                protocol2_process_local_mic(r);
-                break;
-            }
-        }
-        break;
 #ifndef __APPLE__
     case USE_PULSEAUDIO:
         while(running) {
@@ -1151,58 +780,6 @@ void create_audio(int backend_index,const char *backend)
     n_input_devices=0;
 
     switch(radio->which_audio) {
-    case USE_SOUNDIO:
-        g_print("audio: create_audio: USE_SOUNDIO: %d %s\n",soundio_get_backend(soundio,backend_index),backend);
-        soundio = soundio_create();
-        if(!soundio) {
-            g_print("create_audio: soundio_create failed\n");
-            return;
-        }
-        rc=soundio_connect_backend(soundio,soundio_get_backend(soundio,backend_index));
-        if(rc) {
-            g_print("create_audio: soundio_connect_backend: %s\n",soundio_strerror(rc));
-            return;
-        }
-
-        soundio_flush_events(soundio);
-
-        int output_count=soundio_output_device_count(soundio);
-        for(size_t i = 0; i < output_count; i++) {
-            if(n_output_devices<MAX_AUDIO_DEVICES) {
-                struct SoundIoDevice *device=soundio_get_output_device(soundio,i);
-
-                // ignore devices that do not support the sample rate or format
-                if(!soundio_device_supports_sample_rate(device, sample_rate) ) {
-                    continue;
-                }
-                if(!soundio_device_supports_format(device, SoundIoFormatFloat32NE) ) {
-                    continue;
-                }
-
-                output_devices[n_output_devices].name=g_new0(char,strlen(device->name)+1);
-                strncpy(output_devices[n_output_devices].name,device->name,strlen(device->name));
-                output_devices[n_output_devices].description=g_new0(char,strlen(device->name)+1);
-                strncpy(output_devices[n_output_devices].description,device->name,strlen(device->name));
-                output_devices[n_output_devices].index=i;
-                soundio_device_unref(device);
-                n_output_devices++;
-            }
-        }
-        int input_count = soundio_input_device_count(soundio);
-        for(size_t i = 0; i < input_count; i++) {
-            if(n_input_devices < MAX_AUDIO_DEVICES) {
-                struct SoundIoDevice *device=soundio_get_input_device(soundio,i);
-                input_devices[n_input_devices].name=g_new0(char,strlen(device->name)+1);
-                strncpy(input_devices[n_input_devices].name,device->name,strlen(device->name));
-                input_devices[n_input_devices].description=g_new0(char,strlen(device->name)+1);
-                strncpy(input_devices[n_input_devices].description,device->name,strlen(device->name));
-                input_devices[n_input_devices].index=i;
-                soundio_device_unref(device);
-                n_input_devices++;
-            }
-        }
-        break;
-
 #ifndef __APPLE__
     case USE_PULSEAUDIO:
         g_print("audio: create_audio: USE_PULSEAUDIO\n");
@@ -1335,9 +912,6 @@ int audio_get_backends(RADIO *r)
 {
     int count=0;
     switch(r->which_audio) {
-    case USE_SOUNDIO:
-        count=soundio_backend_count(soundio);
-        break;
 #ifndef __APPLE__
     case USE_PULSEAUDIO:
         count=0;
@@ -1346,11 +920,4 @@ int audio_get_backends(RADIO *r)
     }
     g_print("audio_get_backends: %d\n",count);
     return count;
-}
-
-const char *audio_get_backend_name(int backend_index)
-{
-    const char *name=soundio_backend_name(soundio_get_backend(soundio,backend_index));
-    g_print("audio_get_backend_name: %s\n",name);
-    return name;
 }
