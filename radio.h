@@ -204,7 +204,6 @@ typedef struct _radio {
   gboolean iqswap;
 
   gint which_audio;
-  gint which_audio_backend;
 
   gboolean midi_enabled;
   char midi_filename[128];

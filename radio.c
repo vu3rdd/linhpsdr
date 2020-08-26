@@ -214,9 +214,6 @@ g_print("radio_save_state: %s\n",filename);
   sprintf(value,"%d",radio->which_audio);
   setProperty("radio.which_audio",value);
 
-  sprintf(value,"%d",radio->which_audio_backend);
-  setProperty("radio.which_audio_backend",value);
-
   filterSaveState();
   bandSaveState();
 
@@ -364,9 +361,6 @@ void radio_restore_state(RADIO *radio) {
   value=getProperty("radio.which_audio");
   if(value) radio->which_audio=atoi(value);
 
-  value=getProperty("radio.which_audio_backend");
-  if(value) radio->which_audio_backend=atoi(value);
-
 /*
   value=getProperty("rigctl_enable");
   if(value!=NULL) rigctl_enable=atoi(value);
@@ -435,31 +429,8 @@ void radio_change_audio(RADIO *r,int selected) {
   }
 
   r->which_audio=selected;
-  create_audio(r->which_audio_backend, NULL);
+  create_audio();
 }
-
-void radio_change_audio_backend(RADIO *r,int selected) {
-  int i;
-  g_print("%s: %d\n",__FUNCTION__,selected);
-  if(r->which_audio_backend!=selected) {
-    if(r->local_microphone) {
-      radio->local_microphone=FALSE;
-      audio_close_input(r);
-    }
-    for(i=0;i<radio->discovered->supported_receivers;i++) {
-      if(radio->receiver[i]!=NULL) {
-        if(radio->receiver[i]->local_audio) {
-          radio->receiver[i]->local_audio=FALSE;
-          audio_close_output(radio->receiver[i]);
-        }
-      }
-    }
-  }
-
-  r->which_audio_backend=selected;
-  create_audio(r->which_audio_backend, NULL);
-}
-
 
 void vox_changed(RADIO *r) {
   rxtx(radio);
@@ -1071,7 +1042,6 @@ RADIO *create_radio(DISCOVERED *d) {
   r->iqswap = FALSE;
 
   r->which_audio = USE_PULSEAUDIO;
-  r->which_audio_backend = 0;
 
   r->swr_alarm_value = 2.0;
   r->temperature_alarm_value = 42;
@@ -1084,8 +1054,7 @@ RADIO *create_radio(DISCOVERED *d) {
 
   radio_change_region(r);
 
-  create_audio(r->which_audio_backend,
-               NULL);
+  create_audio();
   add_receivers(r);
 
   switch(r->discovered->protocol) {

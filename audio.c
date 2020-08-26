@@ -772,7 +772,7 @@ static void state_cb(pa_context *c, void *userdata)
 }
 #endif
 
-void create_audio(int backend_index,const char *backend)
+void create_audio(void)
 {
     int rc;
 

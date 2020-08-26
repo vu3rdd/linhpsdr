@@ -81,8 +81,6 @@ static GtkWidget *cw_keyer_sidetone_level_b;
 static GtkWidget *cwport;
 #endif
 
-static GtkWidget *audio_backend_combo_box;
-
 /* TO REMOVE
 static gboolean close_cb (GtkWidget *widget, GdkEventButton *event, gpointer data) {
   RADIO *radio=(RADIO *)data;
@@ -322,28 +320,11 @@ static void boost_cb(GtkWidget *widget, gpointer data) {
   radio->mic_boost=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 }
 
-static void update_audio_backends(RADIO *radio) {
-  int i;
-  gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(audio_backend_combo_box));
-
-  if(radio->which_audio_backend>=0) {
-    radio_change_audio_backend(radio,radio->which_audio_backend);
-  }
-}
-
 static void audio_cb(GtkWidget *widget, gpointer data) {
   RADIO *radio=(RADIO *)data;
   int selected=gtk_combo_box_get_active (GTK_COMBO_BOX(widget));
-g_print("radio_dialog: audio_cb: selected=%d\n",selected);
+  g_print("radio_dialog: audio_cb: selected=%d\n",selected);
   radio_change_audio(radio,selected);
-  update_audio_backends(radio);
-}
-
-static void audio_backend_cb(GtkWidget *widget, gpointer data) {
-  RADIO *radio=(RADIO *)data;
-  int selected=gtk_combo_box_get_active (GTK_COMBO_BOX(widget));
-g_print("radio_dialog: audio_backend_cb: selected=%d\n",selected);
-  radio_change_audio_backend(radio,selected);
 }
 
 static void smeter_calibrate_changed_cb(GtkWidget *widget, gpointer data) {
@@ -897,13 +878,6 @@ GtkWidget *create_radio_dialog(RADIO *radio) {
 
   GtkWidget *backend_label=gtk_label_new(" Backend:");
   gtk_grid_attach(GTK_GRID(audio_grid),backend_label,1,0,1,1);
-
-  audio_backend_combo_box=gtk_combo_box_text_new();
-  update_audio_backends(radio);
-  gtk_combo_box_set_active(GTK_COMBO_BOX(audio_backend_combo_box),radio->which_audio_backend);
-  gtk_grid_attach(GTK_GRID(audio_grid),audio_backend_combo_box,2,0,1,1);
-  g_signal_connect(audio_backend_combo_box,"changed",G_CALLBACK(audio_backend_cb),radio);
-
 
   GtkWidget *calibration_frame=gtk_frame_new("Calibration [dBm]");
   GtkWidget *calibration_grid=gtk_grid_new();
