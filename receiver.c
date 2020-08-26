@@ -906,14 +906,9 @@ void receiver_move_to(RECEIVER *rx,long long hz) {
 }
 
 gboolean receiver_button_release_event_cb(GtkWidget *widget, GdkEventButton *event, gpointer data) {
-  gint64 hz;
   RECEIVER *rx=(RECEIVER *)data;
-  int x;
-  int y;
-  GdkModifierType state;
-  x=event->x;
-  y=event->y;
-  state=event->state;
+  int x = event->x;
+
   int moved=x-rx->last_x;
   switch(event->button) {
     case 1: // left button
@@ -945,13 +940,11 @@ gboolean receiver_button_release_event_cb(GtkWidget *widget, GdkEventButton *eve
 }
 
 gboolean receiver_motion_notify_event_cb(GtkWidget *widget, GdkEventMotion *event, gpointer data) {
-  gint x,y;
+  gint x;
   GdkModifierType state;
   RECEIVER *rx=(RECEIVER *)data;
-  long long delta;
 
   x=event->x;
-  y=event->y;
   state=event->state;
   int moved=x-rx->last_x;
   if(rx->is_panning) {
@@ -1029,7 +1022,6 @@ gboolean receiver_scroll_event_cb(GtkWidget *widget, GdkEventScroll *event, gpoi
 static gboolean update_timer_cb(void *data) {
   int rc;
   RECEIVER *rx=(RECEIVER *)data;
-  char *ptr;
 
   g_mutex_lock(&rx->mutex);
   if(!isTransmitting(radio) || (rx->duplex)) {
@@ -1053,9 +1045,7 @@ static gboolean update_timer_cb(void *data) {
 }
  
 static void set_mode(RECEIVER *rx,int m) {
-  int previous_mode;
-  previous_mode=rx->mode_a;
-  rx->mode_a=m;
+  rx->mode_a = m;
   SetRXAMode(rx->channel, m);
 }
 
@@ -1155,63 +1145,62 @@ void receiver_band_changed(RECEIVER *rx,int band) {
 }
 
 static void process_rx_buffer(RECEIVER *rx) {
-  gdouble left_sample,right_sample;
-  short left_audio_sample, right_audio_sample;
-  SUBRX *subrx=(SUBRX *)rx->subrx;
+    gdouble left_sample = 0, right_sample = 0;
+    short left_audio_sample, right_audio_sample;
+    SUBRX *subrx = (SUBRX *)rx->subrx;
 
-  for (int i=0;i<rx->output_samples;i++) {
-    // if subrx is enabled left channel is main and right channel is sub
-    if(rx->subrx_enable) {
-      left_sample=rx->audio_output_buffer[i*2];
-      right_sample=subrx->audio_output_buffer[i*2];
-    } else {
-      // Rx option for left channel only, right only, or both channels
-      switch (rx->audio_channels) {
-        case AUDIO_STEREO: {
-          left_sample = rx->audio_output_buffer[i*2];
-          right_sample = rx->audio_output_buffer[(i*2)+1];     
-          break;
-        }      
-        case AUDIO_LEFT_ONLY: {
-          left_sample = rx->audio_output_buffer[i*2];
-          right_sample = 0;
-          break;
+    for (int i = 0; i < rx->output_samples; i++) {
+        // if subrx is enabled left channel is main and right channel is sub
+        if(rx->subrx_enable) {
+            left_sample=rx->audio_output_buffer[i*2];
+            right_sample=subrx->audio_output_buffer[i*2];
+        } else {
+            // Rx option for left channel only, right only, or both channels
+            switch (rx->audio_channels) {
+            case AUDIO_STEREO:
+                left_sample = rx->audio_output_buffer[i*2];
+                right_sample = rx->audio_output_buffer[(i*2)+1];
+                break;
+
+            case AUDIO_LEFT_ONLY:
+                left_sample = rx->audio_output_buffer[i*2];
+                right_sample = 0;
+                break;
+
+            case AUDIO_RIGHT_ONLY:
+                left_sample = 0;
+                right_sample = rx->audio_output_buffer[(i*2)+1];
+                break;
+
+            }
         }
-        case AUDIO_RIGHT_ONLY: {
-          left_sample = 0;
-          right_sample = rx->audio_output_buffer[(i*2)+1];
-          break;
+        left_audio_sample = (short)(left_sample*32767.0);
+        right_audio_sample = (short)(right_sample*32767.0);
+
+        if(rx->local_audio) {
+            audio_write(rx,(float)left_sample,(float)right_sample);
         }
-      }
-    }
-    left_audio_sample=(short)(left_sample*32767.0);
-    right_audio_sample=(short)(right_sample*32767.0);
 
-    if(rx->local_audio) {
-      audio_write(rx,(float)left_sample,(float)right_sample);
+        if(radio->active_receiver==rx) {
+            if ((isTransmitting(radio) || rx->remote_audio==FALSE) &&  (!rx->duplex)) {
+                left_audio_sample=0;
+                right_audio_sample=0;
+            }
+            switch(radio->discovered->protocol) {
+            case PROTOCOL_1:
+                if(radio->discovered->device!=DEVICE_HERMES_LITE2) {
+                    protocol1_audio_samples(rx,left_audio_sample,right_audio_sample);
+                }
+                break;
+            case PROTOCOL_2:
+                protocol2_audio_samples(rx,left_audio_sample,right_audio_sample);
+                break;
+            }
+        }
     }
-
-    if(radio->active_receiver==rx) {
-
-      if ((isTransmitting(radio) || rx->remote_audio==FALSE) &&  (!rx->duplex)) {
-        left_audio_sample=0;
-        right_audio_sample=0;
-      }
-      switch(radio->discovered->protocol) {
-        case PROTOCOL_1:
-          if(radio->discovered->device!=DEVICE_HERMES_LITE2) {
-            protocol1_audio_samples(rx,left_audio_sample,right_audio_sample);
-          }
-          break;
-        case PROTOCOL_2:
-          protocol2_audio_samples(rx,left_audio_sample,right_audio_sample);
-          break;
-      }
+    if(rx->local_audio && !rx->output_started) {
+        audio_start_output(rx);
     }
-  }
-  if(rx->local_audio && !rx->output_started) {
-    audio_start_output(rx);
-  }
 }
 
 static void full_rx_buffer(RECEIVER *rx) {
@@ -1458,13 +1447,15 @@ g_print("%s: %d\n",__FUNCTION__,zoom);
     rx->pan=0;
   } else {
     if(rx->ctun) {
-      long long min_frequency=rx->frequency_a-(long long)(rx->sample_rate/2);
-      rx->pan=(rx->pixels/2)-(rx->panadapter_width/2);
-      //rx->pan=((rx->min_frequency)/rx->hz_per_pixel)-(rx->panadapter_width/2);
-      if(rx->pan<0) rx->pan=0;
-      if(rx->pan>(rx->pixels-rx->panadapter_width)) rx->pan=rx->pixels-rx->panadapter_width;
+        //long long min_frequency=rx->frequency_a - (long long)(rx->sample_rate/2);
+        rx->pan=(rx->pixels/2)-(rx->panadapter_width/2);
+        //rx->pan=((rx->min_frequency)/rx->hz_per_pixel)-(rx->panadapter_width/2);
+        if(rx->pan<0)
+            rx->pan=0;
+        if(rx->pan > (rx->pixels-rx->panadapter_width))
+            rx->pan=rx->pixels-rx->panadapter_width;
     } else {
-      rx->pan=(rx->pixels/2)-(rx->panadapter_width/2);
+        rx->pan=(rx->pixels/2)-(rx->panadapter_width/2);
     }
   }
   receiver_init_analyzer(rx);
@@ -1774,14 +1765,20 @@ g_print("create_receiver: OpenChannel: channel=%d buffer_size=%d sample_rate=%d 
     if(value) y=atoi(value);
     if(x!=-1 && y!=-1) {
       gtk_window_move(GTK_WINDOW(rx->window),x,y);
-    
-      sprintf(name,"receiver[%d].width",rx->channel);
+
+      // XXX: width needs to have a default value
+      sprintf(name,"receiver[%d].width", rx->channel);
       value=getProperty(name);
-      if(value) width=atoi(value);
-      sprintf(name,"receiver[%d].height",rx->channel);
-      value=getProperty(name);
-      if(value) height=atoi(value);
-      gtk_window_resize(GTK_WINDOW(rx->window),width,height);
+      if(value)
+          width=atoi(value);
+
+      // XXX: height needs to have a default value
+      sprintf(name,"receiver[%d].height", rx->channel);
+      value = getProperty(name);
+      if(value)
+          height = atoi(value);
+
+      gtk_window_resize(GTK_WINDOW(rx->window), width, height);
 
       if(rx->vpaned!=NULL && rx->paned_position!=-1) {
         gint paned_height=gtk_widget_get_allocated_height(rx->vpaned);
